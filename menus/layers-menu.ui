@@ -55,6 +55,7 @@
         <item><attribute name="action">app.layers-lower</attribute></item>
         <item><attribute name="action">app.layers-lower-to-bottom</attribute></item>
      -->
+        <item><attribute name="action">app.layers-copy-selection</attribute></item>
         <item><attribute name="action">app.layers-duplicate</attribute></item>
         <item><attribute name="action">app.layers-anchor</attribute></item>
         <item><attribute name="action">app.layers-merge-down</attribute></item>

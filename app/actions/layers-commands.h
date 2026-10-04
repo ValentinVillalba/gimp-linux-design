@@ -70,6 +70,10 @@ void   layers_lower_to_bottom_cmd_callback    (GimpAction *action,
                                                GVariant   *value,
                                                gpointer    data);
 
+void   layers_copy_selection_cmd_callback     (GimpAction *action,
+                                               GVariant   *value,
+                                               gpointer    data);
+
 void   layers_duplicate_cmd_callback          (GimpAction *action,
                                                GVariant   *value,
                                                gpointer    data);

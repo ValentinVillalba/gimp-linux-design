@@ -54,6 +54,7 @@
 #include "core/gimppickable.h"
 #include "core/gimppickable-auto-shrink.h"
 #include "core/gimprasterizable.h"
+#include "core/gimpselection.h"
 #include "core/gimptoolinfo.h"
 #include "core/gimpundostack.h"
 #include "core/gimpprogress.h"
@@ -980,6 +981,63 @@ layers_lower_to_bottom_cmd_callback (GimpAction *action,
   g_list_free (lowered_layers);
 
   gimp_image_undo_group_end (image);
+  gimp_image_flush (image);
+}
+
+void
+layers_copy_selection_cmd_callback (GimpAction *action,
+                                    GVariant   *value,
+                                    gpointer    data)
+{
+  GimpImage        *image;
+  GList            *layers;
+  GimpLayer        *source;
+  GimpLayer        *layer;
+  GeglBuffer       *buffer;
+  GError          *error = NULL;
+  gint             x, y;
+  gint             source_x, source_y;
+
+  return_if_no_layers (image, layers, data);
+  if (gimp_image_get_floating_selection (image) ||
+      gimp_image_get_selected_channels (image))
+    return;
+
+  source = layers->data;
+  if (layers->next || GIMP_IS_GROUP_LAYER (source) ||
+      gimp_channel_is_empty (gimp_image_get_mask (image)) ||
+      (GIMP_IS_RASTERIZABLE (source) &&
+       ! gimp_rasterizable_is_rasterized (GIMP_RASTERIZABLE (source))))
+    {
+      layers_duplicate_cmd_callback (action, value, data);
+      return;
+    }
+
+  buffer = gimp_selection_extract (GIMP_SELECTION (gimp_image_get_mask (image)),
+                                   layers, action_data_get_context (data),
+                                   FALSE, TRUE, TRUE, &x, &y, &error);
+  if (! buffer)
+    {
+      gimp_message_literal (image->gimp, NULL, GIMP_MESSAGE_WARNING,
+                            error->message);
+      g_clear_error (&error);
+      return;
+    }
+
+  /* Native duplication retains masks, filter stacks and layer properties.
+   * Resize only the duplicate so its mask follows the same crop/offset.
+   */
+  layer = GIMP_LAYER (gimp_item_duplicate (GIMP_ITEM (source),
+                                           G_TYPE_FROM_INSTANCE (source)));
+  gimp_item_get_offset (GIMP_ITEM (source), &source_x, &source_y);
+  gimp_item_resize (GIMP_ITEM (layer), action_data_get_context (data),
+                    GIMP_FILL_TRANSPARENT,
+                    gegl_buffer_get_width (buffer), gegl_buffer_get_height (buffer),
+                    source_x - x, source_y - y);
+  gimp_drawable_set_buffer (GIMP_DRAWABLE (layer), FALSE, NULL, buffer);
+  g_object_unref (buffer);
+  gimp_image_add_layer (image, layer, gimp_layer_get_parent (source),
+                        gimp_item_get_index (GIMP_ITEM (source)), TRUE);
   gimp_image_flush (image);
 }
 

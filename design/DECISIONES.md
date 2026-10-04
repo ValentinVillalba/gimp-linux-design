@@ -44,7 +44,7 @@ Con ejecución autorizada fuera del entorno restringido se encontró Ubuntu 26.0
 
 ## D008 — Adaptación de atajos sin cambiar su significado en silencio
 
-Inicialmente se seleccionaron 39 asociaciones, sin repeticiones, comprobando los identificadores contra el código de 3.2.6. Ctrl+J sigue duplicando capas completas, no copiando solamente los píxeles seleccionados como Photoshop. No se reasignó Ctrl+G a «nuevo grupo», porque GIMP crea un grupo y no mueve las capas seleccionadas dentro. Estas diferencias se documentaron para futuras implementaciones, evitando equivalencias engañosas. D012 registra la posterior implementación de una agrupación real y su asignación a Ctrl+G.
+Inicialmente se seleccionaron 39 asociaciones, sin repeticiones, comprobando los identificadores contra el código de 3.2.6. En esa etapa Ctrl+J duplicaba capas completas, sin copiar solamente los píxeles seleccionados. No se reasignó Ctrl+G a «nuevo grupo», porque GIMP crea un grupo y no mueve las capas seleccionadas dentro. Estas diferencias se documentaron para futuras implementaciones, evitando equivalencias engañosas. D012 registra la posterior agrupación real con Ctrl+G y D014 la copia de selección con Ctrl+J.
 
 ## D009 — Primer acceso directo a ajustes no destructivos
 
@@ -79,6 +79,16 @@ Referencia consultada el 2026-10-04: https://helpx.adobe.com/photoshop/desktop/c
 ## D013 — Verificar el perfil realmente utilizado
 
 La prueba smoke aceptaba GIMP_SMOKE_PROFILE relativo, pero GIMP interpreta GIMP3_DIRECTORY relativo a la carpeta personal. El lanzador preparaba el perfil en el proyecto mientras la prueba arrancaba con otro. Se detectó inspeccionando las rutas Parsing/Writing del registro nativo. smoke-linux.sh convierte ahora la ruta en absoluta antes de exportarla y exige evidencia de que GIMP leyó gimprc, sessionrc, toolrc y shortcutsrc desde ese directorio. El lanzador de uso normal ya resolvía rutas absolutas y no tenía este fallo. Se repitió el arranque con el perfil correcto y pasaron el parser y la salida GTK.
+
+## D014 — Capa mediante copiar selección
+
+Se contrastó el flujo Layer Via Copy en la documentación oficial de Adobe y se revisaron gimp_selection_extract, gimp_drawable_duplicate, gimp_layer_resize y los filtros de GIMP. Ctrl+J usa una acción nueva; «Duplicar capas» conserva su significado anterior. Para una capa raster con selección, la extracción nativa copia sólo su intersección y multiplica alfa por la máscara de selección, con offsets en coordenadas de imagen. No usa ni reemplaza el portapapeles.
+
+La capa se duplica con el mecanismo nativo y se recorta antes de sustituir su buffer por la extracción. El recorte nativo mantiene la máscara alineada y la duplicación conserva propiedades y filtros permanentes. Evita aplanar efectos o perder máscaras al crear una capa raster vacía. No se modifica el original. Sin selección, con múltiples capas, grupos o capas editables no rasterizadas, se duplica la estructura existente. La selección permanece activa; falta contrastar ese detalle de interacción con Photoshop. Los filtros temporales y algunos filtros basados en herramientas no son duplicables por el mecanismo upstream y requieren evaluación posterior.
+
+Las pruebas verifican píxeles originales intactos, alfa parcial/no seleccionado, offset negativo de origen, colocación dentro de un grupo, máscara recortada con valores distintos, filtro permanente duplicado, opacidad, portapapeles, undo/redo y duplicación sin selección. El primer filtro de prueba carecía de máscara congelada y representaba un filtro temporal; se corrigió la preparación para reproducir el ciclo real de un filtro permanente de GIMP, que incluye gimp_drawable_filter_layer_mask_freeze.
+
+Fuentes consultadas el 2026-10-04: https://helpx.adobe.com/photoshop/desktop/create-manage-layers/create-layer-compositions/create-layers-and-layer-groups.html y https://helpx.adobe.com/in/photoshop/desktop/make-selections/refine-modify-selections/copy-and-paste-selections.html. No se añadió ninguna dependencia, servicio de red ni función de IA.
 
 ## Fuentes consultadas
 

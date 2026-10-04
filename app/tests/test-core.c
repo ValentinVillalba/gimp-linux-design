@@ -24,6 +24,13 @@
 
 #include "core/gimp.h"
 #include "core/gimpcontext.h"
+#include "core/gimpchannel.h"
+#include "core/gimpchannel-combine.h"
+#include "core/gimpdrawable.h"
+#include "core/gimpdrawable-filters.h"
+#include "core/gimpdrawablefilter.h"
+#include "core/gimpcontainer.h"
+#include "core/gimplayermask.h"
 #include "core/gimpgrouplayer.h"
 #include "core/gimpimage.h"
 #include "core/gimpimage-undo.h"
@@ -447,6 +454,128 @@ group_selected_ancestor_and_lock (GimpTestFixture *fixture,
   gimp_context_set_image (context, NULL);
 }
 
+static void
+copy_selection_pixels_offsets_undo (GimpTestFixture *fixture,
+                                    gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpImage   *image = fixture->image;
+  GimpContext *context = gimp_get_user_context (gimp);
+  GimpLayer   *parent = gimp_group_layer_new (image);
+  GimpLayer   *source;
+  GimpLayer   *copy;
+  GimpChannel *selection = gimp_image_get_mask (image);
+  GimpObject  *clipboard = gimp_get_clipboard_object (gimp);
+  GeglColor   *white = gegl_color_new ("white");
+  gfloat       mask[3] = { 1.0, 0.5, 0.0 };
+  gfloat       pixels[12];
+  gfloat       mask_pixels[3] = { 0.25, 0.75, 1.0 };
+  GimpLayerMask *layer_mask;
+  GeglNode     *operation;
+  GimpDrawableFilter *filter;
+  gint         x, y;
+
+  gimp_image_add_layer (image, parent, NULL, 0, FALSE);
+  source = group_test_layer (image, parent, "Source");
+  gimp_item_set_offset (GIMP_ITEM (source), -5, 7);
+  gimp_layer_set_opacity (source, 0.7, FALSE);
+  gegl_buffer_set_color (gimp_drawable_get_buffer (GIMP_DRAWABLE (source)),
+                         NULL, white);
+  g_object_unref (white);
+  layer_mask = gimp_layer_create_mask (source, GIMP_ADD_MASK_WHITE, NULL);
+  g_assert_nonnull (gimp_layer_add_mask (source, layer_mask, FALSE, FALSE, NULL));
+  gegl_buffer_set (gimp_drawable_get_buffer (GIMP_DRAWABLE (layer_mask)),
+                   GEGL_RECTANGLE (7, 2, 3, 1), 0, babl_format ("Y float"),
+                   mask_pixels, GEGL_AUTO_ROWSTRIDE);
+  operation = gegl_node_new_child (NULL, "operation", "gegl:invert-linear", NULL);
+  filter = gimp_drawable_filter_new (GIMP_DRAWABLE (source), "Invert", operation, NULL);
+  gimp_drawable_filter_apply (filter, NULL);
+  g_assert_true (gimp_drawable_filter_commit (filter, TRUE, NULL, FALSE));
+  gimp_drawable_filter_layer_mask_freeze (filter);
+  g_object_unref (filter);
+  g_object_unref (operation);
+  gimp_channel_combine_rect (selection, GIMP_CHANNEL_OP_REPLACE, 2, 9, 3, 2);
+  gegl_buffer_set (gimp_drawable_get_buffer (GIMP_DRAWABLE (selection)),
+                   GEGL_RECTANGLE (2, 9, 3, 1), 0, babl_format ("Y float"),
+                   mask, GEGL_AUTO_ROWSTRIDE);
+  gimp_context_set_image (context, image);
+  layers_copy_selection_cmd_callback (NULL, NULL, gimp);
+  copy = gimp_image_get_selected_layers (image)->data;
+  g_assert_true (copy != source);
+  g_assert_true (gimp_layer_get_parent (copy) == parent);
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (copy)), ==, 0);
+  g_assert_cmpint (gimp_item_get_width (GIMP_ITEM (copy)), ==, 3);
+  g_assert_cmpint (gimp_item_get_height (GIMP_ITEM (copy)), ==, 2);
+  gimp_item_get_offset (GIMP_ITEM (copy), &x, &y);
+  g_assert_cmpint (x, ==, 2);
+  g_assert_cmpint (y, ==, 9);
+  g_assert_cmpfloat (gimp_layer_get_opacity (copy), ==, 0.7);
+  gegl_buffer_get (gimp_drawable_get_buffer (GIMP_DRAWABLE (copy)),
+                   GEGL_RECTANGLE (0, 0, 3, 1), 1.0, babl_format ("RGBA float"),
+                   pixels, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
+  g_assert_cmpfloat_with_epsilon (pixels[0], 1.0, 0.01);
+  g_assert_cmpfloat_with_epsilon (pixels[3], 1.0, 0.01);
+  g_assert_cmpfloat_with_epsilon (pixels[7], 0.5, 0.01);
+  g_assert_cmpfloat_with_epsilon (pixels[11], 0.0, 0.01);
+  gegl_buffer_get (gimp_drawable_get_buffer (GIMP_DRAWABLE (source)),
+                   GEGL_RECTANGLE (7, 2, 3, 1), 1.0, babl_format ("RGBA float"),
+                   pixels, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
+  g_assert_cmpfloat_with_epsilon (pixels[7], 1.0, 0.01);
+  g_assert_nonnull (gimp_layer_get_mask (copy));
+  g_assert_true (gimp_layer_get_mask (copy) != layer_mask);
+  g_assert_cmpint (gimp_item_get_width (GIMP_ITEM (gimp_layer_get_mask (copy))), ==, 3);
+  g_assert_cmpint (gimp_item_get_width (GIMP_ITEM (layer_mask)), ==, 10);
+  gegl_buffer_get (gimp_drawable_get_buffer (GIMP_DRAWABLE (gimp_layer_get_mask (copy))),
+                   GEGL_RECTANGLE (0, 0, 3, 1), 1.0, babl_format ("Y float"),
+                   mask_pixels, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
+  g_assert_cmpfloat_with_epsilon (mask_pixels[0], 0.25, 0.01);
+  g_assert_cmpfloat_with_epsilon (mask_pixels[1], 0.75, 0.01);
+  g_assert_cmpint (gimp_container_get_n_children (gimp_drawable_get_filters (GIMP_DRAWABLE (copy))), ==, 1);
+  g_assert_cmpint (gimp_container_get_n_children (gimp_drawable_get_filters (GIMP_DRAWABLE (source))), ==, 1);
+  {
+    GeglBuffer *rendered = gimp_drawable_get_buffer_with_effects (GIMP_DRAWABLE (copy));
+
+    gegl_buffer_get (rendered, GEGL_RECTANGLE (0, 0, 1, 1), 1.0,
+                     babl_format ("RGBA float"), pixels,
+                     GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
+    g_assert_cmpfloat_with_epsilon (pixels[0], 0.0, 0.01);
+    g_object_unref (rendered);
+  }
+  g_assert_true (gimp_get_clipboard_object (gimp) == clipboard);
+  g_assert_false (gimp_channel_is_empty (selection));
+  g_assert_true (gimp_image_undo (image));
+  g_assert_cmpint (gimp_image_get_n_layers (image), ==, 2);
+  g_assert_true (gimp_image_redo (image));
+  g_assert_cmpint (gimp_image_get_n_layers (image), ==, 3);
+  g_assert_true (gimp_layer_get_parent (copy) == parent);
+  gimp_context_set_image (context, NULL);
+}
+
+static void
+copy_without_selection_duplicates (GimpTestFixture *fixture,
+                                    gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpImage   *image = fixture->image;
+  GimpContext *context = gimp_get_user_context (gimp);
+  GimpLayer   *source = group_test_layer (image, NULL, "Whole layer");
+  GimpLayer   *copy;
+  gint         x, y;
+
+  gimp_item_set_offset (GIMP_ITEM (source), -3, 11);
+  gimp_context_set_image (context, image);
+  layers_copy_selection_cmd_callback (NULL, NULL, gimp);
+  copy = gimp_image_get_selected_layers (image)->data;
+  g_assert_true (copy != source);
+  g_assert_cmpint (gimp_item_get_width (GIMP_ITEM (copy)), ==, 10);
+  gimp_item_get_offset (GIMP_ITEM (copy), &x, &y);
+  g_assert_cmpint (x, ==, -3);
+  g_assert_cmpint (y, ==, 11);
+  g_assert_true (gimp_image_undo (image));
+  g_assert_cmpint (gimp_image_get_n_layers (image), ==, 1);
+  gimp_context_set_image (context, NULL);
+}
+
 int
 main (int    argc,
       char **argv)
@@ -471,6 +600,8 @@ main (int    argc,
   ADD_IMAGE_TEST (group_selected_order_undo);
   ADD_IMAGE_TEST (group_selected_common_parent);
   ADD_IMAGE_TEST (group_selected_ancestor_and_lock);
+  ADD_IMAGE_TEST (copy_selection_pixels_offsets_undo);
+  ADD_IMAGE_TEST (copy_without_selection_duplicates);
   ADD_TEST (white_graypoint_in_red_levels);
 
   /* Run the tests */

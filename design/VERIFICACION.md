@@ -40,3 +40,11 @@ El 2026-10-04 se compiló la acción Ctrl+G. Los tres casos nuevos internos de c
 Evidencia en la carpeta testing-loop: `linux-build-grouping.log`, `linux-tests-grouping-full.log`, `linux-test-grouping-details.txt` y `linux-install-grouping.log`. Estos registros prueban jerarquía y comportamiento nativo; no prueban equivalencia visual de todos los casos de composición con Photoshop.
 
 Se comprobó el arranque instalado con `_design-profile-grouping`, tras corregir la ruta relativa del script smoke (D013). `_design-logs/linux-smoke.log` confirma lectura de los cuatro archivos desde la ruta absoluta del proyecto, sin errores de parser ni CRITICAL. La prueba ahora exige esa lectura, además de la salida correcta.
+
+## Capa mediante copiar
+
+El 2026-10-04 se compiló la nueva acción de Ctrl+J. Pasaron los dos casos nuevos de core: copia de píxeles con coordenadas negativas del origen, alfa parcial, máscara de capa alineada, filtro permanente, propiedades, portapapeles y undo/redo; y duplicación completa sin selección. Además de contar el filtro, se verificó el píxel renderizado por el filtro de inversión duplicado. La suite completa pasó de nuevo (20 ejecutables, cero fallos), y también los siete checks del perfil.
+
+Evidencia en testing-loop: `linux-build-copy.log`, `linux-tests-copy-full.log`, `linux-test-copy-details.txt` y `linux-install-copy.log`. La comprobación adicional del render del filtro está en `linux-tests-copy-render.log` y `linux-test-copy-render-details.txt`. No se ha validado un corpus de efectos ni equivalencia completa de Layer Via Copy con Photoshop.
+
+La instalación y el arranque GTK/X11 también pasaron con `_design-profile-copy`. `_design-logs/linux-smoke.log` confirma lectura del perfil y atajos desde la ruta esperada, sin acciones inexistentes, errores de parser ni CRITICAL.

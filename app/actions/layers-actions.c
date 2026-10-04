@@ -112,6 +112,12 @@ static const GimpActionEntry layers_actions[] =
     layers_new_adjustment_group_cmd_callback,
     GIMP_HELP_LAYER_NEW },
 
+  { "layers-copy-selection", GIMP_ICON_OBJECT_DUPLICATE,
+    NC_("layers-action", "Layer via _Copy"), NULL, { NULL },
+    NC_("layers-action", "Copy selected pixels to a new layer, or duplicate layers when no pixel selection applies"),
+    layers_copy_selection_cmd_callback,
+    GIMP_HELP_LAYER_DUPLICATE },
+
   { "layers-duplicate", GIMP_ICON_OBJECT_DUPLICATE,
     NC_("layers-action", "D_uplicate Layers"), NULL, { "<primary><shift>D", NULL },
     NC_("layers-action",
@@ -1051,6 +1057,7 @@ layers_actions_update (GimpActionGroup *group,
   SET_SENSITIVE ("layers-group-selected", n_selected_layers > 0 && !indexed && !fs && !ac && all_movable);
   SET_SENSITIVE ("layers-new-group",        image && !indexed && !fs);
   SET_SENSITIVE ("layers-new-adjustment-group", image && !indexed && !fs && !ac);
+  SET_SENSITIVE ("layers-copy-selection", n_selected_layers > 0 && !fs && !ac);
   SET_SENSITIVE ("layers-duplicate",        n_selected_layers > 0 && !fs && !ac);
   SET_SENSITIVE ("layers-delete",           n_selected_layers > 0 && !ac);
 
