@@ -110,6 +110,14 @@ g_file_is_native no demuestra almacenamiento local: un montaje de red puede tene
 
 Se consultó el contrato oficial de GIO el 2026-10-04: https://docs.gtk.org/gio/method.File.is_native.html. Tres pruebas nuevas cubren rechazo de URI y llamadas directas de cargadores, guardado sin cambiar la imagen, ausencia de transporte y aceptación de rutas/URI nativas. La suite completa de archivos locales sigue pasando.
 
+## D017 — Retirar correo, navegador y enlaces de Acerca de
+
+Se revisaron las entradas Meson de mail/web-browser y el diálogo GTK Acerca de. Ambos complementos dejan de formar parte de la compilación; se conserva su código y licencia como procedencia. Acerca de mantiene autores, licencia y versión, pero elimina el sitio web, el panel de actualización/descarga y la llamada residual de actualización al mostrar el diálogo. Un manejador activate-link devuelve TRUE para impedir que GTK abra enlaces de autores o licencia en un navegador externo. Se retiró también el código específico de fechas que sólo usaba el panel eliminado.
+
+Meson no elimina archivos instalados por versiones anteriores. design/retire-online-plugins.py mueve los dos directorios antiguos a _retired-plugins dentro del prefijo aislado, fuera del árbol de búsqueda. No borra los binarios. Comprueba el ejecutable del prefijo, evita prefijos de sistema habituales y prevalida rutas resueltas antes de mover; rechaza enlaces simbólicos de los objetivos y destinos externos. build-linux.sh ejecuta este paso después de instalar. Las pruebas cubren conservación de otros complementos, contenido original, repetición y rechazo de un enlace exterior sin mover parcialmente los objetivos.
+
+Esto no cierra la auditoría: los llamadores de ayuda y el diálogo crítico todavía requieren adaptación. No se declara aislamiento completo. Contrato GTK consultado el 2026-10-04: https://gnome.pages.gitlab.gnome.org/gtk/gtk3/signal.AboutDialog.activate-link.html y https://docs.gtk.org/gtk3/class.AboutDialog.html. La validación actual compila el diálogo y arranca GTK; falta probar manualmente sus enlaces y disposición visual.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/

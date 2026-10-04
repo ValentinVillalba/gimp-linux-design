@@ -8,6 +8,16 @@ libdir=${GIMP_LIBDIR:-"$install_prefix/lib/x86_64-linux-gnu"}
 profile=${GIMP_SMOKE_PROFILE:-"$source_root/_design-profile-linux-smoke"}
 log="$source_root/_design-logs/linux-smoke.log"
 mkdir -p "$source_root/_design-logs"
+python3 - "$install_prefix" <<'PY'
+import sys
+from pathlib import Path
+prefix = Path(sys.argv[1])
+for pattern in ('lib*/gimp/3.0/plug-ins', 'lib*/*/gimp/3.0/plug-ins'):
+    for directory in prefix.glob(pattern):
+        for name in ('mail', 'web-browser'):
+            if (directory / name).exists():
+                sys.exit(f'Obsolete online plug-in remains installed: {directory / name}')
+PY
 python3 "$source_root/design/launch.py" --prepare-only --profile "$profile"
 # GIMP resolves a relative GIMP3_DIRECTORY against the user's home directory.
 # Use the same absolute directory that the launcher prepared.

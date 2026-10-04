@@ -49,7 +49,6 @@
 
 #include "about-dialog.h"
 #include "authors.h"
-#include "gimp-update.h"
 #include "gimp-version.h"
 
 #include "gimp-intl.h"
@@ -68,8 +67,6 @@ typedef struct
 
   Gimp           *gimp;
 
-  GtkWidget      *update_frame;
-  GimpCoreConfig *config;
 
   GtkWidget      *anim_area;
   PangoLayout    *layout;
@@ -104,8 +101,6 @@ static void        about_dialog_unmap         (GtkWidget       *widget,
 static GdkPixbuf * about_dialog_load_logo     (void);
 static void        about_dialog_add_animation (GtkWidget       *vbox,
                                                GimpAboutDialog *dialog);
-static void        about_dialog_add_update    (GimpAboutDialog *dialog,
-                                               GimpCoreConfig  *config);
 static gboolean    about_dialog_anim_draw     (GtkWidget       *widget,
                                                cairo_t         *cr,
                                                GimpAboutDialog *dialog);
@@ -117,94 +112,13 @@ static void        about_dialog_add_unstable_message
                                               (GtkWidget       *vbox);
 #endif /* ! GIMP_RELEASE */
 
-static void        about_dialog_last_release_changed
-                                              (GimpCoreConfig   *config,
-                                               const GParamSpec *pspec,
-                                               GimpAboutDialog  *dialog);
-static void        about_dialog_download_clicked
-                                              (GtkButton   *button,
-                                               const gchar *link);
-
-static gchar *
-gimp_native_date_time_format (GDateTime   *datetime,
-                              const gchar *format)
+/* Handle links locally so GtkAboutDialog never launches an external URI. */
+static gboolean
+about_dialog_activate_link (GtkAboutDialog *dialog,
+                            const gchar    *uri,
+                            gpointer        user_data)
 {
-#define FORMAT_DATE 1
-#define FORMAT_TIME 2
-  gint   mode     = (g_strcmp0 (format, "%x") == 0) ? FORMAT_DATE : FORMAT_TIME;
-  gchar *result   = NULL;
-
-#if defined(PLATFORM_OSX)
-  NSAutoreleasePool *pool         = [[NSAutoreleasePool alloc] init];
-  NSDateFormatter   *formatter    = [[NSDateFormatter alloc] init];
-  NSDate            *current_date = [NSDate date];
-  NSString          *formatted    = NULL;
-
-  formatter.locale = [NSLocale currentLocale];
-
-  if (mode == FORMAT_DATE)
-    {
-      formatter.dateStyle = NSDateFormatterShortStyle;
-      formatter.timeStyle = NSDateFormatterNoStyle;
-    }
-  else
-    {
-      formatter.dateStyle = NSDateFormatterNoStyle;
-      formatter.timeStyle = NSDateFormatterMediumStyle;
-    }
-  formatted = [formatter stringFromDate:current_date];
-
-  if (formatted)
-    result = g_strdup ([formatted UTF8String]);
-
-  [formatter release];
-  [pool drain];
-
-  if (result)
-    return result;
-
-#elif defined(G_OS_WIN32)
-  SYSTEMTIME st;
-  int        date_len, time_len;
-  wchar_t   *date_buf = NULL;
-  wchar_t   *time_buf = NULL;
-
-  GetLocalTime (&st);
-
-  if (mode == FORMAT_DATE)
-    {
-      date_len = GetDateFormatEx (LOCALE_NAME_USER_DEFAULT, 0, &st,
-                                  NULL, NULL, 0, NULL);
-      if (date_len > 0)
-        {
-          date_buf = g_malloc (date_len * sizeof (wchar_t));
-          if (GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, 0, &st, NULL, date_buf, date_len, NULL))
-            result = g_utf16_to_utf8 ((gunichar2*) date_buf, -1, NULL, NULL, NULL);
-          g_free (date_buf);
-        }
-    }
-  else
-    {
-      time_len = GetTimeFormatEx (LOCALE_NAME_USER_DEFAULT, 0, &st,
-                                  NULL, NULL, 0);
-      if (time_len > 0)
-        {
-          time_buf = g_malloc (time_len * sizeof (wchar_t));
-          if (GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, 0, &st, NULL, time_buf, time_len))
-            result = g_utf16_to_utf8 ((gunichar2*) time_buf, -1, NULL, NULL, NULL);
-          g_free (time_buf);
-        }
-    }
-
-  if (result)
-    return result;
-#endif
-
-  /* Fallback for Linux/Unix and for Windows/macOS API failures */
-  return g_date_time_format (datetime, format);
-
-#undef FORMAT_DATE
-#undef FORMAT_TIME
+  return TRUE;
 }
 
 GtkWidget *
@@ -224,7 +138,6 @@ about_dialog_create (Gimp           *gimp,
 
       dialog.gimp      = gimp;
       dialog.n_authors = G_N_ELEMENTS (authors) - 1;
-      dialog.config    = config;
 
       /* For some people, animated contents may be distracting, or even
        * disturbing. "Vestibular motion disorders" are an example of
@@ -265,8 +178,6 @@ about_dialog_create (Gimp           *gimp,
                              "license",            GIMP_LICENSE,
                              "wrap-license",       TRUE,
                              "logo",               pixbuf,
-                             "website",            "https://www.gimp.org/",
-                             "website-label",      _("Visit the GIMP website"),
                              "authors",            authors,
                              "artists",            artists,
                              "documenters",        documenters,
@@ -283,6 +194,9 @@ about_dialog_create (Gimp           *gimp,
 
       g_set_weak_pointer (&dialog.dialog, widget);
 
+      g_signal_connect (widget, "activate-link",
+                        G_CALLBACK (about_dialog_activate_link),
+                        NULL);
       g_signal_connect (widget, "response",
                         G_CALLBACK (about_dialog_response),
                         NULL);
@@ -315,10 +229,6 @@ about_dialog_create (Gimp           *gimp,
 #ifndef GIMP_RELEASE
           about_dialog_add_unstable_message (children->data);
 #endif /* ! GIMP_RELEASE */
-#ifdef CHECK_UPDATE
-          if (gimp_version_check_update ())
-            about_dialog_add_update (&dialog, config);
-#endif
         }
       else
         g_warning ("%s: ooops, no box in this container?", G_STRLOC);
@@ -382,8 +292,6 @@ static void
 about_dialog_map (GtkWidget       *widget,
                   GimpAboutDialog *dialog)
 {
-  gimp_update_refresh (dialog->config);
-
   if (dialog->layout && dialog->timer == 0)
     {
       dialog->state    = 0;
@@ -465,220 +373,6 @@ about_dialog_add_animation (GtkWidget       *vbox,
 
   g_signal_connect (dialog->anim_area, "draw",
                     G_CALLBACK (about_dialog_anim_draw),
-                    dialog);
-}
-
-static void
-about_dialog_add_update (GimpAboutDialog *dialog,
-                         GimpCoreConfig  *config)
-{
-  GtkWidget *container;
-  GList     *children;
-  GtkWidget *vbox;
-
-  GtkWidget *frame;
-  GtkWidget *box;
-  GtkWidget *box2;
-  GtkWidget *label;
-  GtkWidget *button;
-  GtkWidget *button_image;
-  GtkWidget *button_label;
-  GDateTime *datetime;
-  gchar     *date;
-  gchar     *text;
-
-  if (dialog->update_frame)
-    {
-      gtk_widget_destroy (dialog->update_frame);
-      dialog->update_frame = NULL;
-    }
-
-  /* Get the dialog vbox. */
-  container = gtk_dialog_get_content_area (GTK_DIALOG (dialog->dialog));
-  children = gtk_container_get_children (GTK_CONTAINER (container));
-  g_return_if_fail (GTK_IS_BOX (children->data));
-  vbox = children->data;
-  g_list_free (children);
-
-  /* The update frame. */
-  frame = gtk_frame_new (NULL);
-  gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, FALSE, 2);
-
-  box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
-  gtk_container_add (GTK_CONTAINER (frame), box);
-
-  /* Button in the frame. */
-  button = gtk_button_new ();
-  gtk_box_pack_start (GTK_BOX (box), button, FALSE, FALSE, 0);
-  gtk_widget_set_visible (button, TRUE);
-
-  box2 = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_container_add (GTK_CONTAINER (button), box2);
-  gtk_widget_set_visible (box2, TRUE);
-
-  button_image = gtk_image_new_from_icon_name (NULL, GTK_ICON_SIZE_DIALOG);
-  gtk_box_pack_start (GTK_BOX (box2), button_image, FALSE, FALSE, 0);
-  gtk_widget_set_visible (button_image, TRUE);
-
-  button_label = gtk_label_new (NULL);
-  gtk_box_pack_start (GTK_BOX (box2), button_label, FALSE, FALSE, 0);
-  gtk_container_child_set (GTK_CONTAINER (box2), button_label, "expand", TRUE, NULL);
-  gtk_widget_set_visible (button_label, TRUE);
-
-  if (config->last_known_release != NULL)
-    {
-      /* There is a newer version. */
-      const gchar *download_url = NULL;
-      gchar       *comment      = NULL;
-
-      /* We want the frame to stand out. */
-      label = gtk_label_new (NULL);
-      text = g_strdup_printf ("<tt><b><big>%s</big></b></tt>",
-                              _("Update available!"));
-      gtk_label_set_markup (GTK_LABEL (label), text);
-      g_free (text);
-      gtk_widget_set_visible (label, TRUE);
-      gtk_frame_set_label_widget (GTK_FRAME (frame), label);
-      gtk_frame_set_label_align (GTK_FRAME (frame), 0.5, 0.5);
-      gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_ETCHED_OUT);
-      gtk_box_reorder_child (GTK_BOX (vbox), frame, 3);
-
-      /* Button is an update link. */
-      gtk_image_set_from_icon_name (GTK_IMAGE (button_image),
-                                    "software-update-available",
-                                    GTK_ICON_SIZE_DIALOG);
-#ifdef GIMP_UNSTABLE
-      download_url = "https://www.gimp.org/downloads/devel/";
-#else
-      download_url = "https://www.gimp.org/downloads/";
-#endif
-      g_signal_connect (button, "clicked",
-                        (GCallback) about_dialog_download_clicked,
-                        (gpointer) download_url);
-
-      /* The preferred localized date representation without the time. */
-      datetime = g_date_time_new_from_unix_local (config->last_release_timestamp);
-      date = gimp_native_date_time_format (datetime, "%x");
-      g_date_time_unref (datetime);
-
-      if (config->last_revision > 0)
-        {
-          /* This is actually a new revision of current version. */
-          text = g_strdup_printf (_("Download GIMP %s revision %d (released on %s)\n"),
-                                  config->last_known_release,
-                                  config->last_revision,
-                                  date);
-
-          /* Finally an optional release comment. */
-          if (config->last_release_comment)
-            {
-              /* Translators: <> tags are Pango markup. Please keep these
-               * markups in your translation. */
-              comment = g_strdup_printf (_("<u>Release comment</u>: <i>%s</i>"), config->last_release_comment);
-            }
-        }
-      else
-        {
-          text = g_strdup_printf (_("Download GIMP %s (released on %s)\n"),
-                                  config->last_known_release, date);
-        }
-      gtk_label_set_text (GTK_LABEL (button_label), text);
-      g_free (text);
-      g_free (date);
-
-      if (comment)
-        {
-          label = gtk_label_new (NULL);
-          gtk_label_set_max_width_chars (GTK_LABEL (label), 80);
-          gtk_label_set_markup (GTK_LABEL (label), comment);
-          gtk_label_set_line_wrap (GTK_LABEL (label), TRUE);
-          g_free (comment);
-
-          gtk_box_pack_start (GTK_BOX (box), label, FALSE, FALSE, 0);
-          gtk_widget_set_visible (label, TRUE);
-        }
-    }
-  else
-    {
-      /* Button is a "Check for updates" action. */
-      gtk_image_set_from_icon_name (GTK_IMAGE (button_image),
-                                    "view-refresh",
-                                    GTK_ICON_SIZE_MENU);
-      gtk_label_set_text (GTK_LABEL (button_label), _("Check for updates"));
-      gtk_style_context_add_class (gtk_widget_get_style_context (button),
-                                   "text-button");
-      g_signal_connect_swapped (button, "clicked",
-                                (GCallback) gimp_update_check, config);
-
-    }
-
-  gtk_box_reorder_child (GTK_BOX (vbox), frame, 4);
-
-  /* Last check date box. */
-  box2 = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
-  if (config->last_known_release != NULL)
-    gtk_widget_set_margin_top (box2, 20);
-  gtk_container_add (GTK_CONTAINER (box), box2);
-  gtk_widget_set_visible (box2, TRUE);
-
-  /* Show a small "Check for updates" button only if the big one has
-   * been replaced by a download button.
-   */
-  if (config->last_known_release != NULL)
-    {
-      button = gtk_button_new_from_icon_name ("view-refresh", GTK_ICON_SIZE_MENU);
-      gtk_widget_set_tooltip_text (button, _("Check for updates"));
-      gtk_box_pack_start (GTK_BOX (box2), button, FALSE, FALSE, 0);
-      g_signal_connect_swapped (button, "clicked",
-                                (GCallback) gimp_update_check, config);
-      gtk_widget_set_visible (button, TRUE);
-    }
-
-  if (config->check_update_timestamp > 0)
-    {
-      gchar             *subtext;
-      gchar             *time;
-
-      datetime = g_date_time_new_from_unix_local (config->check_update_timestamp);
-
-      date = gimp_native_date_time_format (datetime, "%x");
-      time = gimp_native_date_time_format (datetime, "%X");
-      if (config->last_known_release != NULL)
-        /* Translators: first string is the date in the locale's date
-        * representation (e.g., 12/31/99), second is the time in the
-        * locale's time representation (e.g., 23:13:48).
-        */
-        subtext = g_strdup_printf (_("Last checked on %s at %s"), date, time);
-      else
-        /* Translators: first string is the date in the locale's date
-        * representation (e.g., 12/31/99), second is the time in the
-        * locale's time representation (e.g., 23:13:48).
-        */
-        subtext = g_strdup_printf (_("Up to date as of %s at %s"), date, time);
-
-      g_date_time_unref (datetime);
-      g_free (date);
-      g_free (time);
-
-      text = g_strdup_printf ("<i>%s</i>", subtext);
-      label = gtk_label_new (NULL);
-      gtk_label_set_markup (GTK_LABEL (label), text);
-      gtk_label_set_justify (GTK_LABEL (label), GTK_JUSTIFY_CENTER);
-      gtk_box_pack_start (GTK_BOX (box2), label, FALSE, FALSE, 0);
-      gtk_container_child_set (GTK_CONTAINER (box2), label, "expand", TRUE, NULL);
-      gtk_widget_set_visible (label, TRUE);
-      g_free (text);
-      g_free (subtext);
-    }
-
-  gtk_widget_set_visible (box, TRUE);
-  gtk_widget_set_visible (frame, TRUE);
-
-  g_set_weak_pointer (&dialog->update_frame, frame);
-
-  /* Reconstruct the dialog when release info changes. */
-  g_signal_connect (config, "notify::last-known-release",
-                    (GCallback) about_dialog_last_release_changed,
                     dialog);
 }
 
@@ -973,29 +667,3 @@ about_dialog_add_unstable_message (GtkWidget *vbox)
 }
 
 #endif /* ! GIMP_RELEASE */
-
-static void
-about_dialog_last_release_changed (GimpCoreConfig   *config,
-                                   const GParamSpec *pspec,
-                                   GimpAboutDialog  *dialog)
-{
-  g_signal_handlers_disconnect_by_func (config,
-                                        (GCallback) about_dialog_last_release_changed,
-                                        dialog);
-  if (! dialog->dialog)
-    return;
-
-  about_dialog_add_update (dialog, config);
-}
-
-static void
-about_dialog_download_clicked (GtkButton   *button,
-                               const gchar *link)
-{
-  GtkWidget *window;
-
-  window = gtk_widget_get_ancestor (GTK_WIDGET (button), GTK_TYPE_WINDOW);
-
-  if (window)
-    gtk_show_uri_on_window (GTK_WINDOW (window), link, GDK_CURRENT_TIME, NULL);
-}

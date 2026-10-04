@@ -24,9 +24,9 @@ Una ruta nativa puede apuntar a un sistema de archivos de red montado por el sis
 | Selector de archivos | app/widgets/gimpfiledialog.c | local-only activado; falta aceptación visual |
 | Actualizaciones | app/gimp-update.c, meson_options.txt | Desactivadas en el build actual; revisar eliminación del código/controles heredados |
 | Ayuda remota/fallback de navegador | app/widgets/gimphelp.c, preferencias, plug-ins/help | Desactivada por el perfil; pendiente retirar fallback y asegurar ayuda local |
-| Navegador web | plug-ins/common/web-browser.c y su entrada Meson | Todavía compilado; pendiente retirar y resolver sus llamadores |
-| Envío por correo | plug-ins/common/mail.c y su entrada Meson | Todavía compilado; pendiente retirar y limpiar binarios instalados antiguos |
-| Enlaces del diálogo Acerca de | app/dialogs/about-dialog.c | Puede lanzar gtk_show_uri_on_window; pendiente adaptar |
+| Navegador web | plug-ins/common/web-browser.c y su entrada Meson | Excluido de Meson; binarios antiguos retirados reversiblemente; falta adaptar llamadores de ayuda |
+| Envío por correo | plug-ins/common/mail.c y su entrada Meson | Excluido de Meson; binarios antiguos retirados fuera del árbol de búsqueda |
+| Enlaces del diálogo Acerca de | app/dialogs/about-dialog.c | Enlaces manejados sin lanzamiento externo; panel de descarga retirado; pendiente aceptación visual |
 | Enlaces del diálogo de error crítico | app/widgets/gimpcriticaldialog.c | Puede abrir navegador para bugs/descargas; pendiente mantener diagnóstico local |
 | Extensiones y recursos externos de formatos | app/core/gimpextension.c, cargadores SVG/PDF y complementos | Revisar URI, referencias incrustadas y comportamiento de bibliotecas; no auditado por completo |
 | Herramientas externas y complementos añadidos por el usuario | sistema de plug-ins, RAW y scripts | Requieren delimitar soporte y comprobar ejecución; no se afirma aislamiento |

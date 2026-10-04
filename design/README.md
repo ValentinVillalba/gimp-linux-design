@@ -122,3 +122,5 @@ Para un fallo nativo: conservar meson-logs/testlog.txt, registro del lanzador, c
 Aceptación manual pendiente: iniciar en Linux, crear/abrir imagen, editar con pincel, transformar, duplicar, usar ajuste en grupo, deshacer/rehacer, guardar/reabrir XCF, exportar PNG/PSD y comparar. Probar teclado español, HiDPI, tableta y resoluciones 1280×720/1920×1080. Comparar CPU/RAM con upstream usando exactamente los mismos archivos. No presentar el perfil como clon completo ni build de pruebas como paquete listo para distribución.
 
 Los resultados de esta primera etapa están en [VERIFICACION.md](VERIFICACION.md). El mapa para localizar las siguientes funciones está en [MAPA_CODIGO.md](MAPA_CODIGO.md).
+
+Después de instalar, build-linux.sh retira los complementos antiguos mail y web-browser a _install/_retired-plugins. Para una instalación incremental ejecutada directamente con Meson, ejecutar también `python3 design/retire-online-plugins.py /ruta/al/prefijo`. El script conserva los binarios fuera del árbol que carga GIMP; no reactivar esos directorios para el editor local.

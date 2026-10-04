@@ -31,4 +31,5 @@ fi
 meson compile -C "$build_dir" -j "$jobs"
 meson test -C "$build_dir" --print-errorlogs
 meson install -C "$build_dir"
+python3 "$source_root/design/retire-online-plugins.py" "$install_prefix"
 printf 'Installed into %s\n' "$install_prefix"

@@ -66,3 +66,11 @@ La suite completa pasó (20 ejecutables, cero fallos), incluidos guardar/exporta
 Esto verifica esas entradas de archivos, no ausencia total de conexiones. AUDITORIA_LOCAL.md mantiene el inventario pendiente y explica el límite de montajes nativos y complementos externos. No se hicieron aún trazas de sockets ni pruebas de recursos remotos incrustados en documentos.
 
 La instalación y el arranque GTK/X11 con `_design-profile-native-files` pasaron. El log `_design-logs/linux-smoke.log` confirma lectura de los cuatro archivos de configuración esperados, sin errores de parser, acciones inexistentes ni CRITICAL.
+
+## Retirada de correo, navegador y enlaces externos — 2026-10-04
+
+Se recompiló Linux después de eliminar los objetivos mail/web-browser y las rutas externas de Acerca de, incluida la llamada residual gimp_update_refresh. Meson: 20 ejecutables de prueba correctos, 0 fallos. Perfil: 7 pruebas correctas. Retirada reversible: 3 pruebas correctas en Linux, incluido rechazo de symlink exterior antes de mover otros objetivos.
+
+La instalación completa conservaba los antiguos binarios de los complementos: se movieron a _install/_retired-plugins y se verificó su ausencia del árbol de búsqueda. Se actualizó luego sólo el ejecutable principal para incorporar la última retirada de la llamada de actualización. El smoke volvió a pasar con _design-profile-offline-plugins, las cuatro rutas de configuración comprobadas y sin errores GTK/parser detectados. smoke-linux.sh rechaza instalaciones que aún contienen mail/web-browser.
+
+Registros en la carpeta raíz: linux-build-offline-plugins.log, linux-tests-offline-plugins.log, linux-test-offline-plugins-details.txt, linux-install-offline-plugins.log; arranque en _design-logs/linux-smoke.log. Las pruebas no certifican el clic manual de enlaces de Acerca de ni aislamiento completo de red. Ayuda y errores críticos siguen pendientes en AUDITORIA_LOCAL.md.

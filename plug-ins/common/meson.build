@@ -65,9 +65,6 @@ common_plugins_list = [
   { 'name': 'guillotine', },
   { 'name': 'hot', },
   { 'name': 'jigsaw', },
-  { 'name': 'mail',
-    'deps': [ scriptingbridge ],
-  },
   { 'name': 'nl-filter', },
   { 'name': 'plugin-browser', },
   { 'name': 'procedure-browser', },
@@ -82,7 +79,6 @@ common_plugins_list = [
   { 'name': 'van-gogh-lic', },
   { 'name': 'warp', },
   { 'name': 'wavelet-decompose', },
-  { 'name': 'web-browser', },
 ]
 
 if libaa.found()
