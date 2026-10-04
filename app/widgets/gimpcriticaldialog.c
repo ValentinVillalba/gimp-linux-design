@@ -54,12 +54,9 @@
 
 
 #define GIMP_CRITICAL_RESPONSE_CLIPBOARD 1
-#define GIMP_CRITICAL_RESPONSE_URL       2
 #define GIMP_CRITICAL_RESPONSE_RESTART   3
-#define GIMP_CRITICAL_RESPONSE_DOWNLOAD  4
 
-#define BUTTON1_TEXT _("Copy Bug Information")
-#define BUTTON2_TEXT _("Open Bug Tracker")
+#define BUTTON1_TEXT _("Copy Diagnostic Information")
 
 enum
 {
@@ -78,9 +75,6 @@ static void     gimp_critical_dialog_response     (GtkDialog    *dialog,
                                                    gint          response_id);
 
 static void     gimp_critical_dialog_copy_info    (GimpCriticalDialog *dialog);
-static gboolean browser_open_url                  (GtkWindow    *window,
-                                                   const gchar  *url,
-                                                   GError      **error);
 #if defined(G_OS_WIN32) || (defined(PLATFORM_OSX) && MAC_OS_X_VERSION_MIN_REQUIRED >= 101400)
 static void     gimp_critical_dialog_realize      (GtkWidget          *widget,
                                                    GimpCriticalDialog *dialog);
@@ -193,85 +187,18 @@ gimp_critical_dialog_constructed (GObject *object)
                                        GTK_SHADOW_IN);
   gtk_widget_set_size_request (scrolled, -1, 200);
 
-  if (dialog->last_version)
-    {
-      GtkWidget *expander;
-      GtkWidget *vbox;
-      GtkWidget *button;
-
-      expander = gtk_expander_new (_("See bug details"));
-      gtk_box_pack_start (GTK_BOX (dialog->main_vbox), expander, TRUE, TRUE, 0);
-      gtk_widget_set_visible (expander, TRUE);
-
-      vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 4);
-      gtk_container_add (GTK_CONTAINER (expander), vbox);
-      gtk_widget_set_visible (vbox, TRUE);
-
-      gtk_box_pack_start (GTK_BOX (vbox), scrolled, TRUE, TRUE, 0);
-      gtk_widget_set_visible (scrolled, TRUE);
-
-      button = gtk_button_new_with_label (BUTTON1_TEXT);
-      g_signal_connect_swapped (button, "clicked",
-                                G_CALLBACK (gimp_critical_dialog_copy_info),
-                                dialog);
-      gtk_box_pack_start (GTK_BOX (vbox), button, FALSE, FALSE, 6);
-      gtk_widget_set_visible (button, TRUE);
-
-      gtk_dialog_add_buttons (GTK_DIALOG (dialog),
-                              _("Go to _Download page"), GIMP_CRITICAL_RESPONSE_DOWNLOAD,
-                              _("_Close"),               GTK_RESPONSE_CLOSE,
-                              NULL);
-
-      /* Recommend an update. */
-      text = g_strdup_printf (_("A new version of GIMP (%s) was released on %s.\n"
-                                "It is recommended to update."),
-                              dialog->last_version, dialog->release_date);
-      gtk_label_set_text (GTK_LABEL (dialog->center_label), text);
-      g_free (text);
-
-      text = _("You are running an unsupported version!");
-      gtk_label_set_text (GTK_LABEL (dialog->bottom_label), text);
-    }
-  else
-    {
-      /* Pack directly (and well visible) the bug details. */
-      gtk_box_pack_start (GTK_BOX (dialog->main_vbox), scrolled, TRUE, TRUE, 6);
-      gtk_widget_set_visible (scrolled, TRUE);
-
-      gtk_dialog_add_buttons (GTK_DIALOG (dialog),
-                              BUTTON1_TEXT, GIMP_CRITICAL_RESPONSE_CLIPBOARD,
-                              BUTTON2_TEXT, GIMP_CRITICAL_RESPONSE_URL,
-                              _("_Close"),  GTK_RESPONSE_CLOSE,
-                              NULL);
-
-      /* Generic "report a bug" instructions. */
-      text = g_strdup_printf ("%s\n"
-                              " \xe2\x80\xa2 %s %s\n"
-                              " \xe2\x80\xa2 %s %s\n"
-                              " \xe2\x80\xa2 %s\n"
-                              " \xe2\x80\xa2 %s\n"
-                              " \xe2\x80\xa2 %s\n"
-                              " \xe2\x80\xa2 %s",
-                              _("To help us improve GIMP, you can report the bug with "
-                                "these simple steps:"),
-                              _("Copy the bug information to the clipboard by clicking: "),
-                              BUTTON1_TEXT,
-                              _("Open our bug tracker in the browser by clicking: "),
-                              BUTTON2_TEXT,
-                              _("Create a login if you don't have one yet."),
-                              _("Paste the clipboard text in a new bug report."),
-                              _("Add relevant information in English in the bug report "
-                                "explaining what you were doing when this error occurred."),
-                              _("This error may have left GIMP in an inconsistent state. "
-                                "It is advised to save your work and restart GIMP."));
-      gtk_label_set_text (GTK_LABEL (dialog->center_label), text);
-      g_free (text);
-
-      text = _("You can also close the dialog directly but "
-               "reporting bugs is the best way to make your "
-               "software awesome.");
-      gtk_label_set_text (GTK_LABEL (dialog->bottom_label), text);
-    }
+  gtk_box_pack_start (GTK_BOX (dialog->main_vbox), scrolled, TRUE, TRUE, 6);
+  gtk_widget_set_visible (scrolled, TRUE);
+  gtk_dialog_add_buttons (GTK_DIALOG (dialog),
+                          BUTTON1_TEXT, GIMP_CRITICAL_RESPONSE_CLIPBOARD,
+                          _("_Close"), GTK_RESPONSE_CLOSE,
+                          NULL);
+  gtk_label_set_text (GTK_LABEL (dialog->center_label),
+                      _("This error may have left GIMP in an inconsistent state. "
+                        "Save your work to a separate file and restart GIMP."));
+  gtk_label_set_text (GTK_LABEL (dialog->bottom_label),
+                      _("Copy the diagnostic information to keep a local record "
+                        "of the error and the steps that caused it."));
 
   buffer = gtk_text_buffer_new (NULL);
   version = gimp_version (TRUE, FALSE);
@@ -397,144 +324,16 @@ gimp_critical_dialog_copy_info (GimpCriticalDialog *dialog)
     }
 }
 
-/* XXX This is taken straight from plug-ins/common/web-browser.c
- *
- * This really sucks but this class also needs to be called by
- * tools/gimp-debug-tool.c as a separate process and therefore cannot
- * make use of the PDB. Anyway shouldn't we just move this as a utils
- * function?  Why does such basic feature as opening a URL in a
- * cross-platform way need to be a plug-in?
- */
-static gboolean
-browser_open_url (GtkWindow    *window,
-                  const gchar  *url,
-                  GError      **error)
-{
-#ifdef G_OS_WIN32
-
-  HINSTANCE hinst = ShellExecute (GetDesktopWindow(),
-                                  "open", url, NULL, NULL, SW_SHOW);
-
-  if ((intptr_t) hinst <= 32)
-    {
-      const gchar *err;
-
-      switch ((intptr_t) hinst)
-        {
-          case 0 :
-            err = _("The operating system is out of memory or resources.");
-            break;
-          case ERROR_FILE_NOT_FOUND :
-            err = _("The specified file was not found.");
-            break;
-          case ERROR_PATH_NOT_FOUND :
-            err = _("The specified path was not found.");
-            break;
-          case ERROR_BAD_FORMAT :
-            err = _("The .exe file is invalid (non-Microsoft Win32 .exe or error in .exe image).");
-            break;
-          case SE_ERR_ACCESSDENIED :
-            err = _("The operating system denied access to the specified file.");
-            break;
-          case SE_ERR_ASSOCINCOMPLETE :
-            err = _("The file name association is incomplete or invalid.");
-            break;
-          case SE_ERR_DDEBUSY :
-            err = _("DDE transaction busy");
-            break;
-          case SE_ERR_DDEFAIL :
-            err = _("The DDE transaction failed.");
-            break;
-          case SE_ERR_DDETIMEOUT :
-            err = _("The DDE transaction timed out.");
-            break;
-          case SE_ERR_DLLNOTFOUND :
-            err = _("The specified DLL was not found.");
-            break;
-          case SE_ERR_NOASSOC :
-            err = _("There is no application associated with the given file name extension.");
-            break;
-          case SE_ERR_OOM :
-            err = _("There was not enough memory to complete the operation.");
-            break;
-          case SE_ERR_SHARE:
-            err = _("A sharing violation occurred.");
-            break;
-          default :
-            err = _("Unknown Microsoft Windows error.");
-        }
-
-      g_set_error (error, 0, 0, _("Failed to open '%s': %s"), url, err);
-
-      return FALSE;
-    }
-
-  return TRUE;
-
-#elif defined(PLATFORM_OSX)
-
-  NSURL    *ns_url;
-  gboolean  retval;
-
-  @autoreleasepool
-    {
-      ns_url = [NSURL URLWithString: [NSString stringWithUTF8String: url]];
-      retval = [[NSWorkspace sharedWorkspace] openURL: ns_url];
-    }
-
-  return retval;
-
-#else
-
-  return gtk_show_uri_on_window (window,
-                                 url,
-                                 GDK_CURRENT_TIME,
-                                 error);
-
-#endif
-}
-
 static void
 gimp_critical_dialog_response (GtkDialog *dialog,
                                gint       response_id)
 {
   GimpCriticalDialog *critical = GIMP_CRITICAL_DIALOG (dialog);
-  const gchar        *url      = NULL;
 
   switch (response_id)
     {
     case GIMP_CRITICAL_RESPONSE_CLIPBOARD:
       gimp_critical_dialog_copy_info (critical);
-      break;
-
-    case GIMP_CRITICAL_RESPONSE_DOWNLOAD:
-#ifdef GIMP_UNSTABLE
-      url = "https://www.gimp.org/downloads/devel/";
-#else
-      url = "https://www.gimp.org/downloads/";
-#endif
-    case GIMP_CRITICAL_RESPONSE_URL:
-      if (url == NULL)
-        {
-          gchar *temp = g_ascii_strdown (BUG_REPORT_URL, -1);
-
-          /* Only accept custom web links. */
-          if (g_str_has_prefix (temp, "http://") ||
-              g_str_has_prefix (temp, "https://"))
-            url = BUG_REPORT_URL;
-          else
-            /* XXX Ideally I'd find a way to prefill the bug report
-             * through the URL or with POST data. But I could not find
-             * any. Anyway since we may soon ditch bugzilla to follow
-             * GNOME infrastructure changes, I don't want to waste too
-             * much time digging into it.
-             */
-            url = PACKAGE_BUGREPORT;
-
-          g_free (temp);
-        }
-
-      browser_open_url (GTK_WINDOW (dialog), url, NULL);
       break;
 
     case GIMP_CRITICAL_RESPONSE_RESTART:
@@ -648,32 +447,10 @@ gimp_critical_dialog_add (GtkWidget   *dialog,
                       text);
   g_free (text);
 
-  if (is_fatal && ! critical->last_version)
-    {
-      /* Same text as before except that we don't need the last point
-       * about saving and restarting since anyway we are crashing and
-       * manual saving is not possible anymore (or even advisable since
-       * if it fails, one may corrupt files).
-       */
-      text = g_strdup_printf ("%s\n"
-                              " \xe2\x80\xa2 %s \"%s\"\n"
-                              " \xe2\x80\xa2 %s \"%s\"\n"
-                              " \xe2\x80\xa2 %s\n"
-                              " \xe2\x80\xa2 %s\n"
-                              " \xe2\x80\xa2 %s",
-                              _("To help us improve GIMP, you can report the bug with "
-                                "these simple steps:"),
-                              _("Copy the bug information to the clipboard by clicking: "),
-                              BUTTON1_TEXT,
-                              _("Open our bug tracker in the browser by clicking: "),
-                              BUTTON2_TEXT,
-                              _("Create a login if you don't have one yet."),
-                              _("Paste the clipboard text in a new bug report."),
-                              _("Add relevant information in English in the bug report "
-                                "explaining what you were doing when this error occurred."));
-      gtk_label_set_text (GTK_LABEL (critical->center_label), text);
-      g_free (text);
-    }
+  if (is_fatal)
+    gtk_label_set_text (GTK_LABEL (critical->center_label),
+                        _("Copy the diagnostic information before restarting GIMP. "
+                          "Unsaved work may be available through recovery on restart."));
 
   /* The details text is untranslated on purpose. This is the message
    * meant to go to clipboard for the bug report. It has to be in

@@ -52,3 +52,5 @@ Se restringieron las entradas de archivos del núcleo y la PDB a rutas nativas; 
 Siguiente trabajo: retirar navegador/correo y fallback de ayuda remota, conservar diagnóstico/ayuda local y verificar conexiones; cerrar la aceptación del perfil. Antes de ampliar capas de ajuste, comprobar la composición y XCF con filtros, máscaras y grupos reales; seguir con estilos, formas y flujos de transformación según la tabla y el código reutilizable disponible.
 
 Se excluyeron mail y web-browser de la compilación y se retiraron los enlaces externos y el panel de descarga de Acerca de. La instalación retira reversiblemente los binarios antiguos. Continúan pendientes la ayuda remota heredada, el diálogo crítico y la auditoría de recursos de documentos.
+
+El diálogo crítico conserva diagnóstico/portapapeles/cierre/reinicio y ya no ofrece gestor de errores ni descargas. Cuatro casos GTK verifican el widget real. La adaptación de ayuda local y la auditoría de recursos de documentos continúan pendientes.

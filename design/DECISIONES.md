@@ -118,6 +118,14 @@ Meson no elimina archivos instalados por versiones anteriores. design/retire-onl
 
 Esto no cierra la auditoría: los llamadores de ayuda y el diálogo crítico todavía requieren adaptación. No se declara aislamiento completo. Contrato GTK consultado el 2026-10-04: https://gnome.pages.gitlab.gnome.org/gtk/gtk3/signal.AboutDialog.activate-link.html y https://docs.gtk.org/gtk3/class.AboutDialog.html. La validación actual compila el diálogo y arranca GTK; falta probar manualmente sus enlaces y disposición visual.
 
+## D018 — Diagnóstico de errores sin sitios externos
+
+Se revisaron gimpcriticaldialog.c, sus propiedades y el ejecutable gimp-debug-tool que reutiliza el mismo widget. Se retiraron la implementación multiplataforma para abrir URL, los botones de gestor de errores/descarga y las instrucciones para crear cuentas. El diálogo conserva información de versión, mensajes acumulados, trazas, copia al portapapeles, cierre y reinicio. Para errores no fatales aconseja guardar en un archivo separado; ante un fallo fatal no aconseja intentar guardar y señala la recuperación posible al reiniciar, sin prometer que exista un documento recuperable.
+
+Las propiedades last-version/release-date y la firma pública se mantienen compatibles con los llamadores existentes, pero ya no presentan recomendaciones de descarga. No se agregó ningún envío de diagnóstico ni otra dependencia. Se reutilizaron el buffer GTK, el portapapeles y el proceso de reinicio existentes.
+
+La prueba design/test-critical-dialog.sh compila el widget real y ejecuta cuatro combinaciones con/sin metadatos de versión y error normal/fatal en Xvfb. Verifica que sólo haya respuestas de copia/cierre/reinicio, que el buffer conserve versión/mensaje/traza y que la respuesta de copia coloque exactamente ese texto en el portapapeles. La función de información de versión usa una cadena de prueba para aislar las dependencias; la compilación completa verifica por separado la integración real del editor y gimp-debug-tool. No se prueba matar/reiniciar un editor ni la recuperación efectiva de archivos en este caso.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/

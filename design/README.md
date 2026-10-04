@@ -124,3 +124,5 @@ Aceptación manual pendiente: iniciar en Linux, crear/abrir imagen, editar con p
 Los resultados de esta primera etapa están en [VERIFICACION.md](VERIFICACION.md). El mapa para localizar las siguientes funciones está en [MAPA_CODIGO.md](MAPA_CODIGO.md).
 
 Después de instalar, build-linux.sh retira los complementos antiguos mail y web-browser a _install/_retired-plugins. Para una instalación incremental ejecutada directamente con Meson, ejecutar también `python3 design/retire-online-plugins.py /ruta/al/prefijo`. El script conserva los binarios fuera del árbol que carga GIMP; no reactivar esos directorios para el editor local.
+
+Para comprobar el diagnóstico crítico bajo Linux: `BUILD_DIR=/ruta/al/build bash design/test-critical-dialog.sh`. Requiere las dependencias de compilación y xvfb-run ya usados por el smoke. El diálogo permite copiar información para conservarla localmente; no abre un gestor de errores ni transmite el informe.
