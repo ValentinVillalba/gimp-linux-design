@@ -13,6 +13,7 @@ install_data(
     ),
     'gimp.css',
     'sessionrc',
+    'shortcutsrc',
     'templaterc',
     'toolrc',
     'unitrc',

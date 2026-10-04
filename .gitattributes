@@ -1,0 +1,11 @@
+*.py text eol=lf
+*.sh text eol=lf
+*.pl text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.xcf binary
+*.ico binary
+*.icc binary
+*.pdf binary
+*.zip binary

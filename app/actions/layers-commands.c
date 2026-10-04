@@ -590,6 +590,38 @@ layers_new_from_visible_cmd_callback (GimpAction *action,
 }
 
 void
+layers_new_adjustment_group_cmd_callback (GimpAction *action,
+                                          GVariant   *value,
+                                          gpointer    data)
+{
+  GimpImage *image;
+  GimpLayer *group;
+  GimpLayer *parent = NULL;
+  GList     *selected;
+  gint       position = 0;
+
+  return_if_no_image (image, data);
+
+  if (gimp_image_get_base_type (image) == GIMP_INDEXED ||
+      gimp_image_get_floating_selection (image) ||
+      gimp_image_get_selected_channels (image))
+    return;
+
+  selected = gimp_image_get_selected_layers (image);
+  if (selected)
+    {
+      parent   = GIMP_LAYER (gimp_item_get_parent (selected->data));
+      position = gimp_item_get_index (selected->data);
+    }
+
+  group = gimp_group_layer_new (image);
+  gimp_object_set_name (GIMP_OBJECT (group), _("Adjustment"));
+  gimp_layer_set_mode (group, GIMP_LAYER_MODE_PASS_THROUGH, FALSE);
+  gimp_image_add_layer (image, group, parent, position, TRUE);
+  gimp_image_flush (image);
+}
+
+void
 layers_new_group_cmd_callback (GimpAction *action,
                                GVariant   *value,
                                gpointer    data)

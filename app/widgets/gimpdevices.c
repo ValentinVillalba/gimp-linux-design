@@ -126,7 +126,9 @@ gimp_devices_save (Gimp     *gimp,
 
       current_device = gimp_device_manager_get_current_device (manager);
 
-      gimp_device_info_save_tool (current_device);
+      /* Virtual displays can exit before any input device is selected. */
+      if (current_device)
+        gimp_device_info_save_tool (current_device);
     }
 
   if (! gimp_config_serialize_to_file (GIMP_CONFIG (manager),

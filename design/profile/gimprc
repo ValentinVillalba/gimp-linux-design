@@ -1,0 +1,15 @@
+# GIMP Linux Design initial preferences. GPL-3.0-or-later.
+(check-updates no)
+(user-manual-online no)
+(use-help no)
+(show-help-button no)
+(toolbox-wilber no)
+(toolbox-groups yes)
+(theme-color-scheme dark)
+(prefer-symbolic-icons yes)
+(default-view
+    (show-rulers yes)
+    (show-layer-boundary no)
+    (show-canvas-boundary no)
+    (snap-to-guides yes)
+    (snap-to-canvas yes))

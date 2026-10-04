@@ -45,6 +45,10 @@ void   layers_new_group_cmd_callback          (GimpAction *action,
                                                GVariant   *value,
                                                gpointer    data);
 
+void   layers_new_adjustment_group_cmd_callback (GimpAction *action,
+                                                 GVariant   *value,
+                                                 gpointer    data);
+
 void   layers_select_cmd_callback             (GimpAction *action,
                                                GVariant   *value,
                                                gpointer    data);

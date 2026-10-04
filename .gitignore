@@ -1,0 +1,6 @@
+/_build/
+/_install/
+/_design-profile*/
+/_design-logs/
+**/__pycache__/
+*.pyc

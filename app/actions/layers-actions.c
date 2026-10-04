@@ -100,6 +100,12 @@ static const GimpActionEntry layers_actions[] =
     layers_new_group_cmd_callback,
     GIMP_HELP_LAYER_NEW },
 
+  { "layers-new-adjustment-group", GIMP_ICON_FOLDER_NEW,
+    NC_("layers-action", "New _Adjustment Group"), NULL, { NULL },
+    NC_("layers-action", "Create an empty pass-through group for non-destructive color adjustments to layers below"),
+    layers_new_adjustment_group_cmd_callback,
+    GIMP_HELP_LAYER_NEW },
+
   { "layers-duplicate", GIMP_ICON_OBJECT_DUPLICATE,
     NC_("layers-action", "D_uplicate Layers"), NULL, { "<primary><shift>D", NULL },
     NC_("layers-action",
@@ -1037,6 +1043,7 @@ layers_actions_update (GimpActionGroup *group,
   SET_SENSITIVE ("layers-new-last-values",  image);
   SET_SENSITIVE ("layers-new-from-visible", image);
   SET_SENSITIVE ("layers-new-group",        image && !indexed && !fs);
+  SET_SENSITIVE ("layers-new-adjustment-group", image && !indexed && !fs && !ac);
   SET_SENSITIVE ("layers-duplicate",        n_selected_layers > 0 && !fs && !ac);
   SET_SENSITIVE ("layers-delete",           n_selected_layers > 0 && !ac);
 

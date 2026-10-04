@@ -1,4 +1,4 @@
-# GIMP sessionrc
+# GIMP Linux Design sessionrc
 # 
 # This file takes session-specific info (that is info, you want to keep
 # between two GIMP sessions).  You are not supposed to edit it manually, but
@@ -12,14 +12,16 @@
 (session-info "toplevel"
     (factory-entry "gimp-single-image-window")
     (position 0 0)
-    (size 800 600)
+    (size 1000 700)
     (open-on-exit)
     (aux-info
-        (left-docks-width "188")
-        (right-docks-width "205")
-        (maximized "no"))
+        (left-docks-width "90")
+        (right-docks-width "280")
+        (maximized "yes"))
     (gimp-toolbox
-        (side left)
+        (side left))
+    (gimp-dock
+        (side right)
         (book
             (current-page 0)
             (dockable "gimp-tool-options"
@@ -37,9 +39,7 @@
             (dockable "gimp-image-list"
                 (tab-style automatic)
                 (aux-info
-                    (show-button-bar "true")))))
-    (gimp-dock
-        (side right)
+                    (show-button-bar "true"))))
         (book
             (current-page 0)
             (dockable "gimp-brush-grid"

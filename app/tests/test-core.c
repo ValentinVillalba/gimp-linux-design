@@ -24,11 +24,15 @@
 
 #include "core/gimp.h"
 #include "core/gimpcontext.h"
+#include "core/gimpgrouplayer.h"
 #include "core/gimpimage.h"
+#include "core/gimpimage-undo.h"
 #include "core/gimplayer.h"
 #include "core/gimplayer-new.h"
 
 #include "operations/gimplevelsconfig.h"
+
+#include "actions/layers-commands.h"
 
 #include "tests.h"
 
@@ -263,6 +267,63 @@ white_graypoint_in_red_levels (GimpTestFixture *fixture,
   g_clear_object (&white);
 }
 
+static void
+adjustment_group_undo_redo (GimpTestFixture *fixture,
+                            gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpImage   *image = fixture->image;
+  GimpContext *context = gimp_get_user_context (gimp);
+  GimpLayer   *adjustment;
+
+  gimp_context_set_image (context, image);
+  layers_new_adjustment_group_cmd_callback (NULL, NULL, gimp);
+  g_assert_cmpint (gimp_image_get_n_layers (image), ==, 1);
+
+  adjustment = gimp_image_get_selected_layers (image)->data;
+  g_assert_true (GIMP_IS_GROUP_LAYER (adjustment));
+  g_assert_cmpint (gimp_layer_get_mode (adjustment), ==,
+                   GIMP_LAYER_MODE_PASS_THROUGH);
+  g_assert_null (gimp_item_get_parent (GIMP_ITEM (adjustment)));
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (adjustment)), ==, 0);
+
+  g_assert_true (gimp_image_undo (image));
+  g_assert_cmpint (gimp_image_get_n_layers (image), ==, 0);
+  g_assert_true (gimp_image_redo (image));
+  g_assert_cmpint (gimp_image_get_n_layers (image), ==, 1);
+  gimp_context_set_image (context, NULL);
+}
+
+static void
+adjustment_group_keeps_parent (GimpTestFixture *fixture,
+                               gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpImage   *image = fixture->image;
+  GimpContext *context = gimp_get_user_context (gimp);
+  GimpLayer   *parent = gimp_group_layer_new (image);
+  GimpLayer   *layer;
+  GimpLayer   *adjustment;
+
+  gimp_image_add_layer (image, parent, NULL, 0, FALSE);
+  layer = gimp_layer_new (image, 10, 10, babl_format ("R'G'B'A u8"),
+                          "Child", GIMP_OPACITY_OPAQUE,
+                          GIMP_LAYER_MODE_NORMAL);
+  gimp_image_add_layer (image, layer, parent, 0, FALSE);
+  gimp_context_set_image (context, image);
+
+  layers_new_adjustment_group_cmd_callback (NULL, NULL, gimp);
+  adjustment = gimp_image_get_selected_layers (image)->data;
+  g_assert_true (GIMP_IS_GROUP_LAYER (adjustment));
+  g_assert_true (gimp_item_get_parent (GIMP_ITEM (adjustment)) == GIMP_ITEM (parent));
+  g_assert_true (gimp_item_get_parent (GIMP_ITEM (layer)) == GIMP_ITEM (parent));
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (adjustment)), ==, 0);
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (layer)), ==, 1);
+  g_assert_true (gimp_image_undo (image));
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (layer)), ==, 0);
+  gimp_context_set_image (context, NULL);
+}
+
 int
 main (int    argc,
       char **argv)
@@ -282,6 +343,8 @@ main (int    argc,
   ADD_IMAGE_TEST (add_layer);
   ADD_IMAGE_TEST (remove_layer);
   ADD_IMAGE_TEST (rotate_non_overlapping);
+  ADD_IMAGE_TEST (adjustment_group_undo_redo);
+  ADD_IMAGE_TEST (adjustment_group_keeps_parent);
   ADD_TEST (white_graypoint_in_red_levels);
 
   /* Run the tests */

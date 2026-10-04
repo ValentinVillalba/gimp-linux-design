@@ -1,4 +1,6 @@
 # GIMP toolrc
+# Tool ordering from PhotoGIMP, Diolinux and contributors, GPL-3.0.
+# See design/THIRD_PARTY.md for the pinned source and license.
 
 (file-version 1)
 
@@ -31,9 +33,6 @@
             (visible yes))
         (GimpToolInfo "gimp-iscissors-tool"
             (icon-name "gimp-tool-iscissors")
-            (visible yes))
-        (GimpToolInfo "gimp-foreground-select-tool"
-            (icon-name "gimp-tool-foreground-select")
             (visible yes))))
 (GimpToolGroup "tool group"
     (visible yes)
@@ -44,6 +43,9 @@
             (visible yes))
         (GimpToolInfo "gimp-by-color-select-tool"
             (icon-name "gimp-tool-by-color-select")
+            (visible yes))
+        (GimpToolInfo "gimp-foreground-select-tool"
+            (icon-name "gimp-tool-foreground-select")
             (visible yes))))
 (GimpToolInfo "gimp-crop-tool"
     (icon-name "gimp-tool-crop")
@@ -127,7 +129,11 @@
             (visible yes))
         (GimpToolInfo "gimp-perspective-clone-tool"
             (icon-name "gimp-tool-perspective-clone")
-            (visible yes))
+            (visible yes))))
+(GimpToolGroup "tool group"
+    (visible yes)
+    (active-tool "gimp-heal-tool")
+    (children
         (GimpToolInfo "gimp-heal-tool"
             (icon-name "gimp-tool-heal")
             (visible yes))))

@@ -437,6 +437,13 @@ menus_restore (Gimp *gimp)
 
   file = gimp_directory_file ("shortcutsrc", NULL);
 
+  /* Seed the design workflow only when no personal shortcuts exist. */
+  if (! g_file_query_exists (file, NULL))
+    {
+      g_object_unref (file);
+      file = gimp_sysconf_directory_file ("shortcutsrc", NULL);
+    }
+
   if (gimp->be_verbose)
     g_print ("Parsing '%s'\n", gimp_file_get_utf8_name (file));
 
@@ -446,6 +453,7 @@ menus_restore (Gimp *gimp)
                 g_file_peek_path (file), error->message);
 
   g_object_unref (file);
+  g_clear_error (&error);
 }
 
 void
