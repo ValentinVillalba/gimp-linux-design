@@ -31,6 +31,7 @@
 #include "core/gimplayer.h"
 #include "core/gimplayer-floating-selection.h"
 #include "core/gimplinklayer.h"
+#include "core/gimplist.h"
 
 #include "text/gimptextlayer.h"
 
@@ -98,6 +99,12 @@ static const GimpActionEntry layers_actions[] =
     NC_("layers-action", "_Group Selected Layers"), NULL, { NULL },
     NC_("layers-action", "Move selected layers into a new pass-through group"),
     layers_group_selected_cmd_callback,
+    GIMP_HELP_LAYER_NEW },
+
+  { "layers-ungroup-selected", GIMP_ICON_FOLDER_NEW,
+    NC_("layers-action", "_Ungroup Selected Layers"), NULL, { NULL },
+    NC_("layers-action", "Move group contents to the parent level without merging layers"),
+    layers_ungroup_selected_cmd_callback,
     GIMP_HELP_LAYER_NEW },
 
   { "layers-new-group", GIMP_ICON_FOLDER_NEW,
@@ -821,6 +828,7 @@ layers_actions_update (GimpActionGroup *group,
   gboolean       any_mask_disabled  = FALSE;
   gboolean       all_writable       = TRUE;
   gboolean       all_movable        = TRUE;
+  gboolean       ungroup_movable    = TRUE;
 
   gint           n_selected_layers  = 0;
   gint           n_layers           = 0;
@@ -866,7 +874,17 @@ layers_actions_update (GimpActionGroup *group,
             }
 
           if (gimp_viewable_get_children (GIMP_VIEWABLE (iter->data)))
-            have_groups = TRUE;
+            {
+              GimpContainer *children = gimp_viewable_get_children (iter->data);
+              GList         *child;
+
+              have_groups = TRUE;
+              if (gimp_item_is_position_locked (iter->data, NULL))
+                ungroup_movable = FALSE;
+              for (child = GIMP_LIST (children)->queue->head; child; child = child->next)
+                if (gimp_item_is_position_locked (child->data, NULL))
+                  ungroup_movable = FALSE;
+            }
           else
             have_no_groups = TRUE;
 
@@ -1055,6 +1073,7 @@ layers_actions_update (GimpActionGroup *group,
   SET_SENSITIVE ("layers-new-last-values",  image);
   SET_SENSITIVE ("layers-new-from-visible", image);
   SET_SENSITIVE ("layers-group-selected", n_selected_layers > 0 && !indexed && !fs && !ac && all_movable);
+  SET_SENSITIVE ("layers-ungroup-selected", have_groups && !fs && !ac && ungroup_movable);
   SET_SENSITIVE ("layers-new-group",        image && !indexed && !fs);
   SET_SENSITIVE ("layers-new-adjustment-group", image && !indexed && !fs && !ac);
   SET_SENSITIVE ("layers-copy-selection", n_selected_layers > 0 && !fs && !ac);

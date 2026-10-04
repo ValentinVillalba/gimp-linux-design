@@ -48,3 +48,11 @@ El 2026-10-04 se compiló la nueva acción de Ctrl+J. Pasaron los dos casos nuev
 Evidencia en testing-loop: `linux-build-copy.log`, `linux-tests-copy-full.log`, `linux-test-copy-details.txt` y `linux-install-copy.log`. La comprobación adicional del render del filtro está en `linux-tests-copy-render.log` y `linux-test-copy-render-details.txt`. No se ha validado un corpus de efectos ni equivalencia completa de Layer Via Copy con Photoshop.
 
 La instalación y el arranque GTK/X11 también pasaron con `_design-profile-copy`. `_design-logs/linux-smoke.log` confirma lectura del perfil y atajos desde la ruta esperada, sin acciones inexistentes, errores de parser ni CRITICAL.
+
+## Desagrupar capas
+
+El 2026-10-04 se compiló Ctrl+Shift+G. Pasaron tres casos internos nuevos de core: orden/offsets/buffer y restauración de máscara/filtro/opacidad por undo; desagrupación de grupos anidados y hermanos con selección mixta; y grupos vacíos con bloqueo de un hijo que impide cambios parciales. El menú también verifica los bloqueos de los hijos directos del grupo.
+
+La suite completa volvió a pasar (20 ejecutables, cero fallos), además de los siete checks del perfil. Evidencia en testing-loop: `linux-build-ungroup.log`, `linux-tests-ungroup-full.log`, `linux-test-ungroup-details.txt` y `linux-install-ungroup.log`. No se ha comparado visualmente todo el comportamiento de desagrupar con Photoshop ni probado un corpus de modos y efectos de grupo.
+
+La instalación y el arranque GTK/X11 pasaron con `_design-profile-ungroup`, incluidos los cuatro archivos del perfil y el nuevo atajo. `_design-logs/linux-smoke.log` no contiene errores de parser, acciones inexistentes ni mensajes CRITICAL.

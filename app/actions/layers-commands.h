@@ -45,6 +45,10 @@ void   layers_group_selected_cmd_callback     (GimpAction *action,
                                                GVariant   *value,
                                                gpointer    data);
 
+void   layers_ungroup_selected_cmd_callback   (GimpAction *action,
+                                               GVariant   *value,
+                                               gpointer    data);
+
 void   layers_new_group_cmd_callback          (GimpAction *action,
                                                GVariant   *value,
                                                gpointer    data);

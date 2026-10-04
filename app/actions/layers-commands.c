@@ -713,6 +713,97 @@ layers_group_selected_cmd_callback (GimpAction *action,
 }
 
 void
+layers_ungroup_selected_cmd_callback (GimpAction *action,
+                                      GVariant   *value,
+                                      gpointer    data)
+{
+  GimpImage  *image;
+  GList      *selected;
+  GList      *stack;
+  GList      *groups = NULL;
+  GList      *iter;
+  GHashTable *selection;
+
+  return_if_no_layers (image, selected, data);
+  if (gimp_image_get_floating_selection (image) ||
+      gimp_image_get_selected_channels (image))
+    return;
+
+  selection = g_hash_table_new (g_direct_hash, g_direct_equal);
+  for (iter = selected; iter; iter = iter->next)
+    g_hash_table_add (selection, iter->data);
+
+  stack = gimp_image_get_layer_list (image);
+  for (iter = stack; iter; iter = iter->next)
+    if (GIMP_IS_GROUP_LAYER (iter->data) &&
+        g_hash_table_contains (selection, iter->data))
+      {
+        GimpContainer *children = gimp_viewable_get_children (iter->data);
+        GList         *child;
+
+        if (gimp_item_is_position_locked (iter->data, NULL))
+          goto locked;
+        for (child = GIMP_LIST (children)->queue->head; child; child = child->next)
+          if (gimp_item_is_position_locked (child->data, NULL))
+            goto locked;
+        /* Reverse stack order handles selected nested groups before parents. */
+        groups = g_list_prepend (groups, iter->data);
+      }
+  g_list_free (stack);
+  if (! groups)
+    {
+      g_hash_table_unref (selection);
+      return;
+    }
+
+  gimp_image_undo_group_start (image, GIMP_UNDO_GROUP_IMAGE_ITEM_REMOVE,
+                               _("Ungroup selected layers"));
+  for (iter = groups; iter; iter = iter->next)
+    {
+      GimpLayer     *group = iter->data;
+      GimpLayer     *parent = gimp_layer_get_parent (group);
+      GimpContainer *children = gimp_viewable_get_children (GIMP_VIEWABLE (group));
+      GList         *contents = g_list_copy (GIMP_LIST (children)->queue->head);
+      GList         *child;
+      gint           position = gimp_item_get_index (GIMP_ITEM (group));
+
+      gimp_group_layer_suspend_resize (GIMP_GROUP_LAYER (group), TRUE);
+      for (child = contents; child; child = child->next)
+        {
+          gimp_image_reorder_item (image, child->data, GIMP_ITEM (parent),
+                                   position++, TRUE, NULL);
+          g_hash_table_add (selection, child->data);
+        }
+      gimp_group_layer_resume_resize (GIMP_GROUP_LAYER (group), TRUE);
+      g_list_free (contents);
+      g_hash_table_remove (selection, group);
+      gimp_image_remove_layer (image, group, TRUE, NULL);
+    }
+  g_list_free (groups);
+
+  selected = NULL;
+  stack = gimp_image_get_layer_list (image);
+  for (iter = stack; iter; iter = iter->next)
+    if (g_hash_table_contains (selection, iter->data))
+      selected = g_list_prepend (selected, iter->data);
+  selected = g_list_reverse (selected);
+  gimp_image_set_selected_layers (image, selected);
+  g_list_free (selected);
+  g_list_free (stack);
+  g_hash_table_unref (selection);
+  gimp_image_undo_group_end (image);
+  gimp_image_flush (image);
+  return;
+
+locked:
+  g_list_free (groups);
+  g_list_free (stack);
+  g_hash_table_unref (selection);
+  gimp_message_literal (image->gimp, NULL, GIMP_MESSAGE_WARNING,
+                        _("Cannot ungroup because a group or its contents are position locked."));
+}
+
+void
 layers_new_group_cmd_callback (GimpAction *action,
                                GVariant   *value,
                                gpointer    data)

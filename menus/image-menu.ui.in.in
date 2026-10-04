@@ -425,6 +425,7 @@
         <item><attribute name="action">app.layers-new</attribute></item>
         <item><attribute name="action">app.layers-new-from-visible</attribute></item>
         <item><attribute name="action">app.layers-group-selected</attribute></item>
+        <item><attribute name="action">app.layers-ungroup-selected</attribute></item>
         <item><attribute name="action">app.layers-new-group</attribute></item>
         <item><attribute name="action">app.layers-new-adjustment-group</attribute></item>
         <item><attribute name="action">app.layers-copy-selection</attribute></item>

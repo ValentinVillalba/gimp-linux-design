@@ -90,6 +90,16 @@ Las pruebas verifican píxeles originales intactos, alfa parcial/no seleccionado
 
 Fuentes consultadas el 2026-10-04: https://helpx.adobe.com/photoshop/desktop/create-manage-layers/create-layer-compositions/create-layers-and-layer-groups.html y https://helpx.adobe.com/in/photoshop/desktop/make-selections/refine-modify-selections/copy-and-paste-selections.html. No se añadió ninguna dependencia, servicio de red ni función de IA.
 
+## D015 — Desagrupar sin fusionar contenido
+
+Se revisó la documentación oficial de Adobe para Ungroup Layers y el complemento público yousei3/gimp-photoshop-layer-workflow, commit e66ca20657af0c80f29c880cf9f9266de9d4b86a. Su README declara GPL v3, aunque el checkout no contiene el LICENSE referenciado. Se estudió como referencia funcional; no se incorporó su Python ni se agregó una dependencia. La implementación reutiliza las operaciones de jerarquía, grupos y undo del núcleo de GIMP, bajo sus licencias existentes.
+
+Ctrl+Shift+G mueve los hijos directos de cada carpeta seleccionada a su padre, en la posición de la carpeta, y elimina el contenedor vacío. Los grupos seleccionados se procesan de dentro hacia fuera, independientemente del orden de los clics. Los hijos no seleccionados que son a su vez grupos se mantienen como carpetas. Se prevalidan los bloqueos para evitar una operación parcial, se mantiene el orden, se selecciona el contenido resultante y se agrupa todo el undo en un paso. No se crean buffers ni se fusionan capas.
+
+Desagrupar descarta el ámbito de composición de la carpeta: su máscara, filtros, modo y opacidad dejan de actuar. No se intentan repartir esos efectos entre los hijos, porque cambiaría su significado. El undo nativo restaura la carpeta y sus propiedades. Las pruebas cubren restauración de máscara/filtro/opacidad, mismo buffer y coordenadas del hijo, orden entre hermanos, grupos anidados seleccionados simultáneamente, selección mixta, carpeta vacía y bloqueo de un hijo antes de modificar nada.
+
+Fuentes consultadas el 2026-10-04: https://helpx.adobe.com/photoshop/desktop/create-manage-layers/transform-manipulate-layers/group-and-ungroup-layers.html y https://github.com/yousei3/gimp-photoshop-layer-workflow. El registro de verificación distingue jerarquía comprobada de comparación visual pendiente.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/
