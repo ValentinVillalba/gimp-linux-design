@@ -4,6 +4,8 @@ Fork nativo y libre de GIMP para acercar el trabajo cotidiano de diseño a los f
 
 Leer primero [DECISIONES.md](DECISIONES.md) y [PLAN.md](PLAN.md). [THIRD_PARTY.md](THIRD_PARTY.md) registra el código reutilizado.
 
+El núcleo abre/guarda rutas nativas y URI file://, y rechaza URI remotas antes de consultar cargadores o ejecutar procedimientos. Se retiró su transporte de descarga/subida/montaje. Todavía quedan rutas heredadas de ayuda, navegador y complementos por retirar; [AUDITORIA_LOCAL.md](AUDITORIA_LOCAL.md) describe las restricciones comprobadas y sus límites. No se considera terminado el requisito de funcionamiento local.
+
 ## Cambios iniciales
 
 - Herramientas agrupadas con la organización de PhotoGIMP; todas las herramientas de la base siguen disponibles.

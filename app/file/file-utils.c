@@ -42,6 +42,22 @@
 #include "gimp-intl.h"
 
 
+gboolean
+file_utils_require_native (GFile   *file,
+                            GError **error)
+{
+  g_return_val_if_fail (G_IS_FILE (file), FALSE);
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+  /* This is a non-blocking path check, before metadata or loader access. */
+  if (g_file_is_native (file))
+    return TRUE;
+
+  g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                       _("Only native file paths are supported. Remote locations are disabled."));
+  return FALSE;
+}
+
 static gboolean
 file_utils_filename_is_uri (const gchar  *filename,
                             GError      **error)
@@ -122,6 +138,8 @@ file_utils_filename_to_file (Gimp         *gimp,
     {
       if (g_utf8_validate (filename, -1, NULL))
         {
+          if (! file_utils_require_native (file, error))
+            g_clear_object (&file);
           return file;
         }
       else
@@ -135,6 +153,8 @@ file_utils_filename_to_file (Gimp         *gimp,
     }
   else if (file_utils_filename_is_uri (filename, &temp_error))
     {
+      if (! file_utils_require_native (file, error))
+        g_clear_object (&file);
       return file;
     }
   else if (temp_error)

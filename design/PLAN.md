@@ -47,4 +47,6 @@ Ctrl+G agrupa ahora las capas seleccionadas mediante una acción nativa, con ord
 
 Ctrl+J tiene ahora una acción nativa para copiar píxeles seleccionados, con alfa de selección, coordenadas y máscara de capa recortada, manteniendo filtros permanentes duplicables y propiedades. Se agregaron dos casos de core sobre píxeles/máscara/filtro/offsets/undo y duplicación sin selección. La selección permanece activa; falta contrastar ese detalle con Photoshop y probar pilas de filtros más complejas.
 
-Siguiente trabajo: cerrar la aceptación del perfil y revisar las rutas de red heredadas. Antes de ampliar capas de ajuste, comprobar la composición y XCF con filtros, máscaras y grupos reales; seguir con estilos, formas y flujos de transformación según la tabla y el código reutilizable disponible.
+Se restringieron las entradas de archivos del núcleo y la PDB a rutas nativas; se retiró el transporte remoto y se agregaron tres pruebas internas. AUDITORIA_LOCAL.md registra la evidencia y las rutas restantes. No se afirma aislamiento completo de red.
+
+Siguiente trabajo: retirar navegador/correo y fallback de ayuda remota, conservar diagnóstico/ayuda local y verificar conexiones; cerrar la aceptación del perfil. Antes de ampliar capas de ajuste, comprobar la composición y XCF con filtros, máscaras y grupos reales; seguir con estilos, formas y flujos de transformación según la tabla y el código reutilizable disponible.

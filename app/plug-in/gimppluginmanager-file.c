@@ -32,6 +32,8 @@
 #include "core/gimp.h"
 #include "core/gimp-utils.h"
 
+#include "file/file-utils.h"
+
 #include "gimpplugin.h"
 #include "gimpplugindef.h"
 #include "gimppluginmanager.h"
@@ -161,6 +163,9 @@ gimp_plug_in_manager_file_procedure_find (GimpPlugInManager      *manager,
   g_return_val_if_fail (GIMP_IS_PLUG_IN_MANAGER (manager), NULL);
   g_return_val_if_fail (G_IS_FILE (file), NULL);
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  if (! file_utils_require_native (file, error))
+    return NULL;
 
   switch (group)
     {

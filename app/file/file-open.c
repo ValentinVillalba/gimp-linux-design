@@ -54,6 +54,7 @@
 #include "file-import.h"
 #include "file-open.h"
 #include "file-remote.h"
+#include "file-utils.h"
 #include "gimp-file.h"
 
 #include "gimp-intl.h"
@@ -948,6 +949,9 @@ file_open_pre_check (Gimp                 *gimp,
   g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
 
   *status = GIMP_PDB_EXECUTION_ERROR;
+
+  if (! file_utils_require_native (file, error))
+    return FALSE;
 
   if (g_file_is_native (file) && ! file_open_valid_permissions (file, error))
     return FALSE;

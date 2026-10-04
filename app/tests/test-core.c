@@ -18,6 +18,8 @@
 #include <gegl.h>
 #include <gtk/gtk.h>
 
+#include "libgimpbase/gimpbase.h"
+
 #include "widgets/widgets-types.h"
 
 #include "widgets/gimpuimanager.h"
@@ -40,6 +42,13 @@
 #include "operations/gimplevelsconfig.h"
 
 #include "actions/layers-commands.h"
+
+#include "file/file-open.h"
+#include "file/file-save.h"
+#include "file/file-utils.h"
+#include "file/file-remote.h"
+#include "plug-in/gimppluginmanager-file.h"
+#include "pdb/gimppdb.h"
 
 #include "tests.h"
 
@@ -730,6 +739,131 @@ ungroup_empty_and_position_locked (GimpTestFixture *fixture,
   gimp_context_set_image (context, NULL);
 }
 
+static void
+native_file_paths_and_remote_rejection (GimpTestFixture *fixture,
+                                        gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpContext *context = gimp_get_user_context (gimp);
+  const gchar *uris[] = { "https://example.invalid/test.xcf",
+                          "http://127.0.0.1/test.png",
+                          "ftp://example.invalid/test.jpg",
+                          "sftp://example.invalid/test.png",
+                          "smb://example.invalid/share/test.xcf",
+                          "trash:///test.xcf" };
+  GError      *error = NULL;
+  GFile       *file;
+  GFile       *parsed;
+  gchar       *uri;
+  guint        i;
+
+  file = g_file_new_for_path ("/tmp/design local image.xcf");
+  g_assert_true (file_utils_require_native (file, &error));
+  g_assert_no_error (error);
+  uri = g_file_get_uri (file);
+  parsed = file_utils_filename_to_file (gimp, uri, &error);
+  g_assert_nonnull (parsed);
+  g_assert_true (g_file_equal (file, parsed));
+  g_assert_no_error (error);
+  g_object_unref (parsed);
+  g_free (uri);
+  g_object_unref (file);
+
+  for (i = 0; i < G_N_ELEMENTS (uris); i++)
+    {
+      GimpPDBStatusType status = GIMP_PDB_SUCCESS;
+
+      file = g_file_new_for_uri (uris[i]);
+      g_assert_false (file_utils_require_native (file, &error));
+      g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+      g_clear_error (&error);
+      parsed = file_utils_filename_to_file (gimp, uris[i], &error);
+      g_assert_null (parsed);
+      g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+      g_clear_error (&error);
+      g_assert_null (file_open_image (gimp, context, NULL, file,
+                                     0, 0, FALSE, FALSE, NULL,
+                                     GIMP_RUN_NONINTERACTIVE, NULL,
+                                     &status, NULL, &error));
+      g_assert_cmpint (status, ==, GIMP_PDB_EXECUTION_ERROR);
+      g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+      g_clear_error (&error);
+      g_assert_null (gimp_plug_in_manager_file_procedure_find (gimp->plug_in_manager,
+                                                              GIMP_FILE_PROCEDURE_GROUP_OPEN,
+                                                              file, &error));
+      g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+      g_clear_error (&error);
+      g_object_unref (file);
+    }
+}
+
+static void
+remote_save_and_transport_disabled (GimpTestFixture *fixture,
+                                     gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpImage   *image = fixture->image;
+  GFile       *local = g_file_new_for_path ("/tmp/design-test.xcf");
+  GFile       *remote = g_file_new_for_uri ("https://example.invalid/design-test.xcf");
+  GError      *error = NULL;
+  GimpPlugInProcedure *save_proc;
+
+  save_proc = gimp_plug_in_manager_file_procedure_find (gimp->plug_in_manager,
+                                                        GIMP_FILE_PROCEDURE_GROUP_SAVE,
+                                                        local, &error);
+  g_assert_nonnull (save_proc);
+  g_assert_no_error (error);
+  g_assert_cmpint (file_save (gimp, image, NULL, remote, save_proc,
+                             GIMP_RUN_NONINTERACTIVE, TRUE, FALSE, FALSE, &error),
+                   ==, GIMP_PDB_EXECUTION_ERROR);
+  g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+  g_clear_error (&error);
+  g_assert_null (gimp_image_get_file (image));
+  g_assert_false (file_remote_mount_file (gimp, remote, NULL, &error));
+  g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+  g_clear_error (&error);
+  g_assert_null (file_remote_download_image (gimp, remote, NULL, &error));
+  g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+  g_clear_error (&error);
+  g_assert_null (file_remote_upload_image_prepare (gimp, remote, NULL, &error));
+  g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+  g_clear_error (&error);
+  g_assert_false (file_remote_upload_image_finish (gimp, remote, local, NULL, &error));
+  g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+  g_clear_error (&error);
+  g_object_unref (local);
+  g_object_unref (remote);
+}
+
+static void
+pdb_remote_file_rejected_before_loader (GimpTestFixture *fixture,
+                                        gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpContext *context = gimp_get_user_context (gimp);
+  GFile       *remote = g_file_new_for_uri ("https://example.invalid/design-test.xcf");
+  GError      *error = NULL;
+  GimpValueArray *values;
+  const gchar *procedures[] = { "gimp-file-load", "gimp-xcf-load" };
+  guint        i;
+
+  for (i = 0; i < G_N_ELEMENTS (procedures); i++)
+    {
+      values = gimp_pdb_execute_procedure_by_name (gimp->pdb, context, NULL, &error,
+                                                   procedures[i],
+                                                   GIMP_TYPE_RUN_MODE, GIMP_RUN_NONINTERACTIVE,
+                                                   G_TYPE_FILE, remote,
+                                                   G_TYPE_NONE);
+      g_assert_nonnull (values);
+      g_assert_cmpint (g_value_get_enum (gimp_value_array_index (values, 0)),
+                       ==, GIMP_PDB_EXECUTION_ERROR);
+      g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+      g_clear_error (&error);
+      gimp_value_array_unref (values);
+    }
+  g_object_unref (remote);
+}
+
 int
 main (int    argc,
       char **argv)
@@ -759,6 +893,9 @@ main (int    argc,
   ADD_IMAGE_TEST (ungroup_order_properties_undo);
   ADD_IMAGE_TEST (ungroup_nested_and_mixed_selection);
   ADD_IMAGE_TEST (ungroup_empty_and_position_locked);
+  ADD_IMAGE_TEST (native_file_paths_and_remote_rejection);
+  ADD_IMAGE_TEST (remote_save_and_transport_disabled);
+  ADD_IMAGE_TEST (pdb_remote_file_rejected_before_loader);
   ADD_TEST (white_graypoint_in_red_levels);
 
   /* Run the tests */

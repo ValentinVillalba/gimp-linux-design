@@ -20,6 +20,9 @@
 #pragma once
 
 
+gboolean    file_utils_require_native    (GFile        *file,
+                                          GError      **error);
+
 GFile     * file_utils_filename_to_file  (Gimp         *gimp,
                                           const gchar  *filename,
                                           GError      **error);

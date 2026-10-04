@@ -35,6 +35,8 @@
 #include "core/gimpparamspecs.h"
 #include "core/gimpprogress.h"
 
+#include "file/file-utils.h"
+
 #include "path/gimppath.h"
 
 #include "gimppdbcontext.h"
@@ -869,6 +871,15 @@ gimp_procedure_validate_args (GimpProcedure  *procedure,
                            g_type_name (arg_type));
             }
 
+          return FALSE;
+        }
+      else if (! return_vals && g_type_is_a (arg_type, G_TYPE_FILE) &&
+               g_value_get_object (arg) != NULL &&
+               ! file_utils_require_native (g_value_get_object (arg), error))
+        {
+          /* File parameters must not reach a plug-in or metadata validator
+           * with a remote URI, even when normal validation was disabled.
+           */
           return FALSE;
         }
       else if (! (pspec->flags & GIMP_PARAM_NO_VALIDATE))

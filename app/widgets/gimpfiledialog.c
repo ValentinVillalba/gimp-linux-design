@@ -344,7 +344,7 @@ gimp_file_dialog_constructed (GObject *object)
                                            GTK_RESPONSE_CANCEL,
                                            -1);
 
-  gtk_file_chooser_set_local_only (GTK_FILE_CHOOSER (object), FALSE);
+  gtk_file_chooser_set_local_only (GTK_FILE_CHOOSER (object), TRUE);
   gtk_file_chooser_set_do_overwrite_confirmation (GTK_FILE_CHOOSER (object),
                                                   TRUE);
 

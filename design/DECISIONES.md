@@ -100,6 +100,16 @@ Desagrupar descarta el ámbito de composición de la carpeta: su máscara, filtr
 
 Fuentes consultadas el 2026-10-04: https://helpx.adobe.com/photoshop/desktop/create-manage-layers/transform-manipulate-layers/group-and-ungroup-layers.html y https://github.com/yousei3/gimp-photoshop-layer-workflow. El registro de verificación distingue jerarquía comprobada de comparación visual pendiente.
 
+## D016 — Archivos nativos y retirada del transporte remoto
+
+Se revisó el código de apertura/guardado, el parser de URI, el transporte GIO/GVfs y las llamadas PDB. gimp-file-load podía buscar e invocar el cargador sin pasar por file_open_pre_check, y un cargador concreto podía invocarse directamente. Se añadió una política común antes de los accesos y también en la validación de argumentos GFile de procedimientos. No se editan invocadores generados: la restricción central sobrevive a regenerar la PDB y cubre los cargadores directos.
+
+El transporte remoto se retiró de file-remote.c, conservando la licencia y funciones internas que devuelven un error claro. No basta bloquear un botón o cambiar un valor del perfil. El selector GTK usa local-only y el menú ya no ofrece «Abrir ubicación». Se mantienen rutas nativas y file://; los nombres de archivo con espacios continúan funcionando. El mensaje de la política no imprime el URI ni sus credenciales; los registros y errores envolventes heredados todavía pueden incluir rutas y deben revisarse antes de compartirlos.
+
+g_file_is_native no demuestra almacenamiento local: un montaje de red puede tener ruta nativa. Tampoco impide que un complemento ejecute sockets por su cuenta. No se presenta esta medida como sandbox ni como auditoría terminada. AUDITORIA_LOCAL.md registra superficies pendientes, incluidas ayuda/navegador/correo y recursos de documentos. No se añadieron dependencias ni reglas del sistema operativo.
+
+Se consultó el contrato oficial de GIO el 2026-10-04: https://docs.gtk.org/gio/method.File.is_native.html. Tres pruebas nuevas cubren rechazo de URI y llamadas directas de cargadores, guardado sin cambiar la imagen, ausencia de transporte y aceptación de rutas/URI nativas. La suite completa de archivos locales sigue pasando.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/

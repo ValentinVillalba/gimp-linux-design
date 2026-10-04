@@ -56,3 +56,13 @@ El 2026-10-04 se compiló Ctrl+Shift+G. Pasaron tres casos internos nuevos de co
 La suite completa volvió a pasar (20 ejecutables, cero fallos), además de los siete checks del perfil. Evidencia en testing-loop: `linux-build-ungroup.log`, `linux-tests-ungroup-full.log`, `linux-test-ungroup-details.txt` y `linux-install-ungroup.log`. No se ha comparado visualmente todo el comportamiento de desagrupar con Photoshop ni probado un corpus de modos y efectos de grupo.
 
 La instalación y el arranque GTK/X11 pasaron con `_design-profile-ungroup`, incluidos los cuatro archivos del perfil y el nuevo atajo. `_design-logs/linux-smoke.log` no contiene errores de parser, acciones inexistentes ni mensajes CRITICAL.
+
+## Archivos nativos y transporte remoto retirado
+
+El 2026-10-04 pasaron tres casos nuevos internos de core: aceptación de rutas/URI file:// y rechazo de HTTP(S), FTP, SFTP, SMB y trash://; guardado remoto rechazado sin cambiar el archivo asociado de la imagen y los cuatro transportes antiguos deshabilitados; y rechazo de llamadas PDB directas a gimp-file-load y gimp-xcf-load antes del cargador. La comprobación central también se aplica antes de la validación normal de parámetros GFile.
+
+La suite completa pasó (20 ejecutables, cero fallos), incluidos guardar/exportar y XCF locales. También pasaron los siete checks del perfil. Evidencia en testing-loop: `linux-build-native-files.log`, `linux-tests-native-files-full.log`, `linux-test-native-files-details.txt` y `linux-install-native-files.log`.
+
+Esto verifica esas entradas de archivos, no ausencia total de conexiones. AUDITORIA_LOCAL.md mantiene el inventario pendiente y explica el límite de montajes nativos y complementos externos. No se hicieron aún trazas de sockets ni pruebas de recursos remotos incrustados en documentos.
+
+La instalación y el arranque GTK/X11 con `_design-profile-native-files` pasaron. El log `_design-logs/linux-smoke.log` confirma lectura de los cuatro archivos de configuración esperados, sin errores de parser, acciones inexistentes ni CRITICAL.

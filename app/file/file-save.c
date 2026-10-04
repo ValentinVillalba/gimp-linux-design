@@ -44,6 +44,7 @@
 
 #include "file-remote.h"
 #include "file-save.h"
+#include "file-utils.h"
 #include "gimp-file.h"
 
 #include "gimp-intl.h"
@@ -82,6 +83,9 @@ file_save (Gimp                *gimp,
                         GIMP_PDB_CALLING_ERROR);
   g_return_val_if_fail (error == NULL || *error == NULL,
                         GIMP_PDB_CALLING_ERROR);
+
+  if (! file_utils_require_native (file, error))
+    return GIMP_PDB_EXECUTION_ERROR;
 
   orig_file = file;
 
