@@ -164,10 +164,6 @@ gimp_help_user_manual_is_installed (Gimp *gimp)
 
   g_return_val_if_fail (GIMP_IS_GIMP (gimp), FALSE);
 
-  /*  if GIMP2_HELP_URI is set, assume that the manual can be found there  */
-  if (g_getenv ("GIMP2_HELP_URI"))
-    return TRUE;
-
   basedir = gimp_help_get_user_manual_basedir ();
 
   if (g_file_query_file_type (basedir, G_FILE_QUERY_INFO_NONE, NULL) ==
@@ -235,11 +231,7 @@ gimp_help_get_installed_languages (void)
   GList *manuals = NULL;
   GFile *basedir;
 
-  /*  if GIMP2_HELP_URI is set, assume that the manual can be found there  */
-  if (g_getenv ("GIMP2_HELP_URI"))
-    basedir = g_file_new_for_uri (g_getenv ("GIMP2_HELP_URI"));
-  else
-    basedir = gimp_help_get_user_manual_basedir ();
+  basedir = gimp_help_get_user_manual_basedir ();
 
   if (g_file_query_file_type (basedir, G_FILE_QUERY_INFO_NONE, NULL) ==
       G_FILE_TYPE_DIRECTORY)
@@ -290,32 +282,21 @@ gimp_help_get_installed_languages (void)
 static gboolean
 gimp_idle_help (GimpIdleHelp *idle_help)
 {
-  GimpGuiConfig *config         = GIMP_GUI_CONFIG (idle_help->gimp->config);
   const gchar   *procedure_name = NULL;
 
   if (! idle_help->help_domain       &&
-      ! config->user_manual_online   &&
       ! gimp_help_user_manual_is_installed (idle_help->gimp))
     {
       /*  The user manual is not installed locally, propose alternative
-       *  manuals (other installed languages or online version).
+       *  manuals in other installed languages.
        */
       gimp_help_query_alt_user_manual (idle_help);
 
       return FALSE;
     }
 
-  if (config->help_browser == GIMP_HELP_BROWSER_GIMP)
-    {
-      if (gimp_help_browser (idle_help->gimp, idle_help->progress))
-        procedure_name = "extension-gimp-help-browser-temp";
-    }
-
-  if (config->help_browser == GIMP_HELP_BROWSER_WEB_BROWSER)
-    {
-      /*  FIXME: should check for procedure availability  */
-      procedure_name = "plug-in-web-browser";
-    }
+  if (gimp_help_browser (idle_help->gimp, idle_help->progress))
+    procedure_name = "extension-gimp-help-browser-temp";
 
   if (procedure_name)
     gimp_help_call (idle_help->gimp,
@@ -373,8 +354,7 @@ gimp_help_browser (Gimp         *gimp,
                                    _("The GIMP help browser is not available."),
                                    _("The GIMP help browser plug-in appears "
                                      "to be missing from your installation. "
-                                     "You may instead use the web browser "
-                                     "for reading the help pages."));
+                                     "Install the local help viewer to read the manual."));
           busy = FALSE;
 
           return FALSE;
@@ -413,8 +393,7 @@ gimp_help_browser (Gimp         *gimp,
                                _("Help browser doesn't start"),
                                _("Could not start the GIMP help browser "
                                  "plug-in."),
-                               _("You may instead use the web browser "
-                                 "for reading the help pages."));
+                               _("Check your local help viewer installation."));
       busy = FALSE;
 
       return FALSE;
@@ -438,15 +417,9 @@ gimp_help_browser_error (Gimp         *gimp,
                                     NULL, 0,
                                     NULL, NULL,
 
-                                    _("_Cancel"),          GTK_RESPONSE_CANCEL,
-                                    _("Use _Web Browser"), GTK_RESPONSE_OK,
+                                    _("_Close"), GTK_RESPONSE_CLOSE,
 
                                     NULL);
-
-  gimp_dialog_set_alternative_button_order (GTK_DIALOG (dialog),
-                                           GTK_RESPONSE_OK,
-                                           GTK_RESPONSE_CANCEL,
-                                           -1);
 
   if (progress)
     gimp_window_set_transient_for (GTK_WINDOW (dialog), progress);
@@ -455,12 +428,7 @@ gimp_help_browser_error (Gimp         *gimp,
                                      "%s", primary);
   gimp_message_box_set_text (GIMP_MESSAGE_DIALOG (dialog)->box, "%s", text);
 
-  if (gimp_dialog_run (GIMP_DIALOG (dialog)) == GTK_RESPONSE_OK)
-    {
-      g_object_set (gimp->config,
-                    "help-browser", GIMP_HELP_BROWSER_WEB_BROWSER,
-                    NULL);
-    }
+  gimp_dialog_run (GIMP_DIALOG (dialog));
 
   gtk_widget_destroy (dialog);
 }
@@ -588,6 +556,7 @@ gimp_help_get_help_domains (Gimp    *gimp,
   gchar **plug_in_domains = NULL;
   gchar **plug_in_uris    = NULL;
   gint    i, n_domains;
+  gint    accepted = 1;
 
   n_domains = gimp_plug_in_manager_get_help_domains (gimp->plug_in_manager,
                                                      &plug_in_domains,
@@ -601,8 +570,18 @@ gimp_help_get_help_domains (Gimp    *gimp,
 
   for (i = 0; i < n_domains; i++)
     {
-      (*domain_names)[i + 1] = plug_in_domains[i];
-      (*domain_uris)[i + 1]  = plug_in_uris[i];
+      GFile *file = plug_in_uris[i] ? g_file_new_for_uri (plug_in_uris[i]) : NULL;
+      if (file && g_file_is_native (file))
+        {
+          (*domain_names)[accepted] = plug_in_domains[i];
+          (*domain_uris)[accepted++] = plug_in_uris[i];
+        }
+      else
+        {
+          g_free (plug_in_domains[i]);
+          g_free (plug_in_uris[i]);
+        }
+      g_clear_object (&file);
     }
 
   g_free (plug_in_domains);
@@ -612,15 +591,8 @@ gimp_help_get_help_domains (Gimp    *gimp,
 static gchar *
 gimp_help_get_default_domain_uri (Gimp *gimp)
 {
-  GimpGuiConfig *config = GIMP_GUI_CONFIG (gimp->config);
   GFile         *dir;
   gchar         *uri;
-
-  if (g_getenv ("GIMP2_HELP_URI"))
-    return g_strdup (g_getenv ("GIMP2_HELP_URI"));
-
-  if (config->user_manual_online)
-    return g_strdup (config->user_manual_online_uri);
 
   dir = gimp_help_get_user_manual_basedir ();
   uri = g_file_get_uri (dir);
@@ -732,6 +704,15 @@ gimp_help_get_user_manual_basedir (void)
   GFile *user_dir;
   GFile *sys_dir;
 
+  const gchar *override = g_getenv ("GIMP2_HELP_URI");
+  if (override)
+    {
+      GFile *file = g_file_new_for_uri (override);
+      if (g_file_is_native (file))
+        return file;
+      g_object_unref (file);
+    }
+
   /* 1. Help is on user settings (e.g. for AppImage, macOS .app) */
   user_dir = gimp_directory_file ("help", NULL);
   if (g_file_query_exists (user_dir, NULL))
@@ -746,18 +727,12 @@ gimp_help_get_user_manual_basedir (void)
 }
 
 static void
-gimp_help_query_online_response (GtkWidget    *dialog,
+gimp_help_query_manual_response (GtkWidget    *dialog,
                                  gint          response,
                                  GimpIdleHelp *idle_help)
 {
   gtk_widget_destroy (dialog);
 
-  if (response == GTK_RESPONSE_ACCEPT)
-    {
-      g_object_set (idle_help->gimp->config,
-                    "user-manual-online", TRUE,
-                    NULL);
-    }
   if (response != GTK_RESPONSE_YES)
     {
       g_object_set (idle_help->gimp->config,
@@ -765,8 +740,7 @@ gimp_help_query_online_response (GtkWidget    *dialog,
                     NULL);
     }
 
-  if (response == GTK_RESPONSE_ACCEPT ||
-      response == GTK_RESPONSE_YES)
+  if (response == GTK_RESPONSE_YES)
     {
       gimp_help_show (idle_help->gimp,
                       idle_help->progress,
@@ -822,22 +796,18 @@ gimp_help_query_alt_user_manual (GimpIdleHelp *idle_help)
 
       gimp_message_box_set_text (GIMP_MESSAGE_DIALOG (dialog)->box,
                                  _("You may either select a manual in another "
-                                   "language or read the online version."));
+                                   "language or install a local manual."));
     }
   else
     {
       gimp_message_box_set_text (GIMP_MESSAGE_DIALOG (dialog)->box,
                                  _("You may either install the additional help "
-                                   "package or change your preferences to use "
-                                   "the online version."));
+                                   "package to read the manual locally."));
     }
-  gtk_dialog_add_button (GTK_DIALOG (dialog),
-                         _("Read _Online"), GTK_RESPONSE_ACCEPT);
-  gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_ACCEPT);
+  gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_CANCEL);
   if (manuals != NULL)
     {
       gimp_dialog_set_alternative_button_order (GTK_DIALOG (dialog),
-                                               GTK_RESPONSE_ACCEPT,
                                                GTK_RESPONSE_YES,
                                                GTK_RESPONSE_CANCEL,
                                                -1);
@@ -846,12 +816,11 @@ gimp_help_query_alt_user_manual (GimpIdleHelp *idle_help)
   else
     {
       gimp_dialog_set_alternative_button_order (GTK_DIALOG (dialog),
-                                               GTK_RESPONSE_ACCEPT,
                                                GTK_RESPONSE_CANCEL,
                                                -1);
     }
   g_signal_connect (dialog, "response",
-                    G_CALLBACK (gimp_help_query_online_response),
+                    G_CALLBACK (gimp_help_query_manual_response),
                     idle_help);
   gtk_widget_set_visible (dialog, TRUE);
 }

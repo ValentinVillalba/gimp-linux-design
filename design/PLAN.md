@@ -54,3 +54,5 @@ Siguiente trabajo: retirar navegador/correo y fallback de ayuda remota, conserva
 Se excluyeron mail y web-browser de la compilación y se retiraron los enlaces externos y el panel de descarga de Acerca de. La instalación retira reversiblemente los binarios antiguos. Continúan pendientes la ayuda remota heredada, el diálogo crítico y la auditoría de recursos de documentos.
 
 El diálogo crítico conserva diagnóstico/portapapeles/cierre/reinicio y ya no ofrece gestor de errores ni descargas. Cuatro casos GTK verifican el widget real. La adaptación de ayuda local y la auditoría de recursos de documentos continúan pendientes.
+
+La ayuda ya no ofrece lectura en línea ni usa navegador externo. El parser y los dominios usan rutas nativas. Quedan pendientes las preferencias antiguas, la revisión del visor HTML opcional y su instalación/aceptación visual.

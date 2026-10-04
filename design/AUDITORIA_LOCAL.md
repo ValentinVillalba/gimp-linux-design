@@ -23,7 +23,7 @@ Una ruta nativa puede apuntar a un sistema de archivos de red montado por el sis
 | Cargadores llamados directamente | app/pdb/gimpprocedure.c y app/plug-in/gimppluginmanager-file.c | Argumentos GFile remotos rechazados antes de invocar |
 | Selector de archivos | app/widgets/gimpfiledialog.c | local-only activado; falta aceptación visual |
 | Actualizaciones | app/gimp-update.c, meson_options.txt | Desactivadas en el build actual; revisar eliminación del código/controles heredados |
-| Ayuda remota/fallback de navegador | app/widgets/gimphelp.c, preferencias, plug-ins/help | Desactivada por el perfil; pendiente retirar fallback y asegurar ayuda local |
+| Ayuda remota/fallback de navegador | app/widgets/gimphelp.c, preferencias, plug-ins/help | Despacho sin navegador externo; índices restringidos a rutas nativas; pendientes preferencias y enlaces/subrecursos del visor opcional |
 | Navegador web | plug-ins/common/web-browser.c y su entrada Meson | Excluido de Meson; binarios antiguos retirados reversiblemente; falta adaptar llamadores de ayuda |
 | Envío por correo | plug-ins/common/mail.c y su entrada Meson | Excluido de Meson; binarios antiguos retirados fuera del árbol de búsqueda |
 | Enlaces del diálogo Acerca de | app/dialogs/about-dialog.c | Enlaces manejados sin lanzamiento externo; panel de descarga retirado; pendiente aceptación visual |

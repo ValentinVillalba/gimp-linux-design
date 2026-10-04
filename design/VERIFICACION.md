@@ -80,3 +80,9 @@ Registros en la carpeta raíz: linux-build-offline-plugins.log, linux-tests-offl
 Compilación Linux correcta del editor y gimp-debug-tool. Meson: 20 pruebas correctas, 0 fallos. design/test-critical-dialog.sh: cuatro casos GTK correctos con/sin versión posterior y error normal/fatal. La prueba compila el widget real, utiliza una cadena de versión de prueba y comprueba respuestas permitidas, contenido de diagnóstico y copia exacta al portapapeles. No ejecuta matar/reiniciar procesos ni valida recuperación efectiva de archivos.
 
 Se actualizaron los ejecutables del prefijo aislado conservando bibliotecas/recursos de la instalación anterior. El smoke GTK pasó con _design-profile-local-diagnostics y comprobó las cuatro rutas de perfil y ausencia de errores detectados. Registros en la carpeta raíz: linux-build-local-diagnostics.log, linux-tests-local-diagnostics.log, linux-test-local-diagnostics-details.txt y linux-test-local-dialog.log; arranque en _design-logs/linux-smoke.log. El funcionamiento sin red sigue pendiente de la auditoría de ayuda y recursos externos.
+
+## Despacho e índice de ayuda local — 2026-10-04
+
+Compilación Linux correcta y suite Meson completa: 20 pruebas correctas, 0 fallos. design/test-local-help.sh compila el parser real con sus auxiliares: rechaza índices HTTPS/SFTP con NOT_SUPPORTED y lee/mapea un índice XML nativo cuyo nombre contiene espacios. Se actualizaron el editor y el complemento help del prefijo aislado. El smoke pasó con _design-profile-local-help, configuración comprobada y salida normal.
+
+Registros raíz: linux-build-local-help.log y linux-tests-local-help.log; arranque en _design-logs/linux-smoke.log. No se prueba navegación visual de manuales, diálogos de idioma, preferencias antiguas ni cargas HTML del visor WebKit opcional, ausente en este build. D019 y AUDITORIA_LOCAL.md mantienen estos límites.

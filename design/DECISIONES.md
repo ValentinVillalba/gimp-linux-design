@@ -126,6 +126,16 @@ Las propiedades last-version/release-date y la firma pública se mantienen compa
 
 La prueba design/test-critical-dialog.sh compila el widget real y ejecuta cuatro combinaciones con/sin metadatos de versión y error normal/fatal en Xvfb. Verifica que sólo haya respuestas de copia/cierre/reinicio, que el buffer conserve versión/mensaje/traza y que la respuesta de copia coloque exactamente ese texto en el portapapeles. La función de información de versión usa una cadena de prueba para aislar las dependencias; la compilación completa verifica por separado la integración real del editor y gimp-debug-tool. No se prueba matar/reiniciar un editor ni la recuperación efectiva de archivos en este caso.
 
+## D019 — Despacho de ayuda e índices locales
+
+Se revisaron gimphelp.c y el parser independiente gimphelplocale.c. El despacho usa el visor interno y no el complemento web-browser, aunque un perfil antiguo tenga seleccionada esa alternativa. El diálogo de manual faltante permite elegir otro idioma instalado o cerrar; no ofrece lectura en línea ni cambia preferencias para habilitarla. Los errores del visor se limitan al cierre y a instrucciones de instalación local.
+
+La URI del dominio principal se obtiene siempre de una carpeta nativa. GIMP2_HELP_URI sólo se admite si representa una ruta nativa, y se comprueba realmente la existencia del índice en vez de asumir que la variable garantiza un manual instalado. Se filtran las URI remotas de dominios de complementos antes de entregarlos al visor. El identificador https://www.gimp.org/help permanece como espacio de nombres del índice XML; no es una URL de descarga.
+
+El parser independiente rechaza GFile no nativos antes de consultar metadatos o leer datos, incluso ante una llamada directa o por la rama de macOS. Una prueba compila sus archivos reales y comprueba rechazo HTTPS/SFTP con G_IO_ERROR_NOT_SUPPORTED y lectura/mapeo de un índice nativo con espacios en el nombre. No se agrega otra biblioteca ni se sustituye el manual completo por contenido reducido.
+
+El visor WebKit opcional no está compilado en esta configuración. Todavía se deben retirar/revisar sus enlaces y cargas HTML/subrecursos, y limpiar las preferencias antiguas que ofrecen alternativas ahora ignoradas. Estos cambios no certifican aislamiento de red ni una instalación completa de manuales. También falta probar visualmente la selección de idioma y los diálogos de ayuda.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/

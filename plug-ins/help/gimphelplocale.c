@@ -210,6 +210,13 @@ gimp_help_locale_parse (GimpHelpLocale    *locale,
 #endif
 
   file = g_file_new_for_uri (uri);
+  if (! g_file_is_native (file))
+    {
+      g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                           _("Only local help indexes are supported."));
+      g_object_unref (file);
+      return FALSE;
+    }
 
   if (progress)
     {
