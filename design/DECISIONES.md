@@ -136,6 +136,14 @@ El parser independiente rechaza GFile no nativos antes de consultar metadatos o 
 
 El visor WebKit opcional no está compilado en esta configuración. Todavía se deben retirar/revisar sus enlaces y cargas HTML/subrecursos, y limpiar las preferencias antiguas que ofrecen alternativas ahora ignoradas. Estos cambios no certifican aislamiento de red ni una instalación completa de manuales. También falta probar visualmente la selección de idioma y los diálogos de ayuda.
 
+## D020 — Preferencias coherentes con la ayuda local
+
+Se revisó la página Help System y el restablecimiento de preferencias. Se retiraron el selector de manual en línea y la selección de navegador externo, que habían quedado sin efecto después de D019. La página conserva los botones de ayuda, selección de idioma de manuales instalados y estado del manual. Añade un aviso cuando falta el visor interno. El selector de idioma tiene una etiqueta con mnemónico y el aviso ocupa la fila siguiente.
+
+Se eliminó el cambio automático a navegador externo cuando falta WebKit/visor. Restablecer preferencias selecciona el visor interno y manual local. Las propiedades antiguas de configuración se conservan por compatibilidad con perfiles; el despacho local de D019 sigue siendo la autoridad aunque contengan valores anteriores. No se incorporaron bibliotecas ni nuevas conexiones.
+
+La compilación y suite verifican integración y regresiones generales. Falta abrir visualmente esta página con/sin manuales y comprobar teclado/escala; el arranque smoke no demuestra esos comportamientos. El visor HTML opcional y sus subrecursos siguen pendientes de auditoría.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/

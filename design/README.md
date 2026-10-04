@@ -128,3 +128,5 @@ Después de instalar, build-linux.sh retira los complementos antiguos mail y web
 Para comprobar el diagnóstico crítico bajo Linux: `BUILD_DIR=/ruta/al/build bash design/test-critical-dialog.sh`. Requiere las dependencias de compilación y xvfb-run ya usados por el smoke. El diálogo permite copiar información para conservarla localmente; no abre un gestor de errores ni transmite el informe.
 
 La ayuda busca manuales instalados localmente y requiere el visor interno opcional. GIMP2_HELP_URI sólo admite URI nativas; perfiles antiguos de ayuda en línea se ignoran. La compilación mínima actual no incluye el visor WebKit. Prueba del parser: `BUILD_DIR=/ruta/al/build bash design/test-local-help.sh`.
+
+En Preferencias → Sistema de ayuda se muestran los idiomas de manuales instalados y el estado del manual/visor local. No se ofrece navegador externo ni manual en línea. Restablecer preferencias mantiene estas opciones locales.

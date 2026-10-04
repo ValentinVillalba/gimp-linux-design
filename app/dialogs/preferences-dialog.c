@@ -243,13 +243,10 @@ prefs_response (GtkWidget *widget,
             gimp_config_reset (config_copy);
             gimp_rc_load_system (GIMP_RC (config_copy));
 
-            /* don't use the default value if there is no help browser */
-            if (! gimp_help_browser_is_installed (gimp))
-              {
-                g_object_set (config_copy,
-                              "help-browser", GIMP_HELP_BROWSER_WEB_BROWSER,
-                              NULL);
-              }
+            g_object_set (config_copy,
+                          "help-browser", GIMP_HELP_BROWSER_GIMP,
+                          "user-manual-online", FALSE,
+                          NULL);
           }
 
         gtk_widget_destroy (confirm);
@@ -2740,13 +2737,6 @@ prefs_dialog_new (Gimp       *gimp,
                           GTK_BOX (vbox2));
 
   grid = prefs_grid_new (GTK_CONTAINER (vbox2));
-  button = prefs_boolean_combo_box_add (object, "user-manual-online",
-                                        _("Use the online version"),
-                                        _("Use a locally installed copy"),
-                                        _("U_ser manual:"),
-                                        GTK_GRID (grid), 0, size_group);
-  gimp_help_set_help_data (button, NULL, NULL);
-
   manuals = gimp_help_get_installed_languages ();
   entry   = NULL;
   if (manuals != NULL)
@@ -2779,7 +2769,12 @@ prefs_dialog_new (Gimp       *gimp,
       g_signal_connect (entry, "changed",
                         G_CALLBACK (prefs_help_language_change_callback),
                         gimp);
-      gtk_grid_attach (GTK_GRID (grid), entry, 1, 1, 1, 1);
+      label = gtk_label_new_with_mnemonic (_("Manual _language:"));
+      gtk_label_set_mnemonic_widget (GTK_LABEL (label), entry);
+      gtk_widget_set_halign (label, GTK_ALIGN_START);
+      gtk_grid_attach (GTK_GRID (grid), label, 0, 0, 1, 1);
+      gtk_widget_set_visible (label, TRUE);
+      gtk_grid_attach (GTK_GRID (grid), entry, 1, 0, 1, 1);
       gtk_widget_set_visible (entry, TRUE);
     }
 
@@ -2804,43 +2799,17 @@ prefs_dialog_new (Gimp       *gimp,
       g_list_free_full (manuals, g_free);
     }
 
-  gtk_grid_attach (GTK_GRID (grid), hbox, 1, 2, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), hbox, 0, 1, 2, 1);
   gtk_widget_set_visible (hbox, TRUE);
 
-  /*  Help Browser  */
-#ifdef HAVE_WEBKIT
-  /*  If there is no webkit available, assume we are on a platform
-   *  that doesn't use the help browser, so don't bother showing
-   *  the combo.
-   */
-  vbox2 = prefs_frame_new (_("Help Browser"), GTK_CONTAINER (vbox), FALSE);
-
-  if (gimp_help_browser_is_installed (gimp))
-    {
-      grid = prefs_grid_new (GTK_CONTAINER (vbox2));
-
-      button = prefs_enum_combo_box_add (object, "help-browser", 0, 0,
-                                         _("H_elp browser to use:"),
-                                         GTK_GRID (grid), 0, size_group);
-    }
-  else
+  /* The fork uses only the internal viewer; report missing support clearly. */
+  if (! gimp_help_browser_is_installed (gimp))
     {
       hbox = prefs_hint_box_new (GIMP_ICON_DIALOG_WARNING,
-                                 _("The GIMP help browser doesn't seem to "
-                                   "be installed. Using the web browser "
-                                   "instead."));
+                                 _("The local help viewer is not installed."));
       gtk_box_pack_start (GTK_BOX (vbox2), hbox, FALSE, FALSE, 0);
       gtk_widget_set_visible (hbox, TRUE);
-
-      g_object_set (config,
-                    "help-browser", GIMP_HELP_BROWSER_WEB_BROWSER,
-                    NULL);
     }
-#else
-  g_object_set (config,
-                "help-browser", GIMP_HELP_BROWSER_WEB_BROWSER,
-                NULL);
-#endif /* HAVE_WEBKIT */
 
   /* Action Search */
   vbox2 = prefs_frame_new (_("Action Search"), GTK_CONTAINER (vbox), FALSE);

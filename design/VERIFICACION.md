@@ -86,3 +86,9 @@ Se actualizaron los ejecutables del prefijo aislado conservando bibliotecas/recu
 Compilación Linux correcta y suite Meson completa: 20 pruebas correctas, 0 fallos. design/test-local-help.sh compila el parser real con sus auxiliares: rechaza índices HTTPS/SFTP con NOT_SUPPORTED y lee/mapea un índice XML nativo cuyo nombre contiene espacios. Se actualizaron el editor y el complemento help del prefijo aislado. El smoke pasó con _design-profile-local-help, configuración comprobada y salida normal.
 
 Registros raíz: linux-build-local-help.log y linux-tests-local-help.log; arranque en _design-logs/linux-smoke.log. No se prueba navegación visual de manuales, diálogos de idioma, preferencias antiguas ni cargas HTML del visor WebKit opcional, ausente en este build. D019 y AUDITORIA_LOCAL.md mantienen estos límites.
+
+## Preferencias de ayuda local — 2026-10-04
+
+Se recompiló el editor Linux tras retirar selectores de manual en línea/navegador externo y el fallback automático de preferencias. Meson: 20 pruebas correctas, 0 fallos. Se actualizó el ejecutable del prefijo aislado y pasó el smoke con _design-profile-local-help-preferences, lectura comprobada de las cuatro configuraciones y salida normal.
+
+Registros raíz: linux-build-local-help-preferences.log y linux-tests-local-help-preferences.log. Falta aceptación visual de la página con/sin manuales, teclado y escalado; las pruebas anteriores no demuestran esa interacción. La política efectiva de índices locales sigue cubierta por test-local-help.sh y D019.
