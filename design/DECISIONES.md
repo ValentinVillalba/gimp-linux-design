@@ -44,7 +44,7 @@ Con ejecución autorizada fuera del entorno restringido se encontró Ubuntu 26.0
 
 ## D008 — Adaptación de atajos sin cambiar su significado en silencio
 
-Se seleccionaron 39 asociaciones, sin repeticiones, comprobando los identificadores contra el código de 3.2.6. Ctrl+J sigue duplicando capas completas, no copiando solamente los píxeles seleccionados como Photoshop. No se reasignó Ctrl+G a «nuevo grupo», porque GIMP crea un grupo y no mueve las capas seleccionadas dentro. Estas diferencias se documentaron para futuras implementaciones, evitando equivalencias engañosas.
+Inicialmente se seleccionaron 39 asociaciones, sin repeticiones, comprobando los identificadores contra el código de 3.2.6. Ctrl+J sigue duplicando capas completas, no copiando solamente los píxeles seleccionados como Photoshop. No se reasignó Ctrl+G a «nuevo grupo», porque GIMP crea un grupo y no mueve las capas seleccionadas dentro. Estas diferencias se documentaron para futuras implementaciones, evitando equivalencias engañosas. D012 registra la posterior implementación de una agrupación real y su asignación a Ctrl+G.
 
 ## D009 — Primer acceso directo a ajustes no destructivos
 
@@ -67,6 +67,18 @@ El prefix aislado no encontraba por defecto las extensiones de babl/GEGL de la d
 Con GDK_BACKEND=x11, la pantalla Xvfb no tenía dispositivo de entrada seleccionado al cerrar. gimp_devices_save llamaba gimp_device_info_save_tool con NULL y generaba una aserción crítica. Se añadió una comprobación de NULL que preserva el guardado del manager y no cambia el comportamiento cuando hay dispositivo. La prueba smoke ahora también falla ante CRITICAL. Este ajuste no valida tabletas ni sustituye sus pruebas manuales.
 
 Al repetir la suite después de instalar, core y xcf encontraban los complementos de ejemplo instalados, pero no Gimp.typelib ni libgimp del prefix propio. Antes de instalar la suite había pasado. Se reprodujo y comprobó que especificar GI_TYPELIB_PATH/LD_LIBRARY_PATH del build resolvía ambos fallos. Se fijaron esas rutas en el entorno Meson de las pruebas antiguas de app, sin cambiar las rutas del sistema ni ocultar sus errores.
+
+## D012 — Agrupar la selección real
+
+Se revisaron las instrucciones oficiales de Adobe para agrupar capas y el código nativo de jerarquía, movimiento y undo de GIMP. Se añadió una acción distinta de «Nuevo grupo»: Ctrl+G mueve las capas seleccionadas a una carpeta Pass through. La pila existente determina el orden, no el orden de los clics. Se filtran descendientes de grupos seleccionados para evitar duplicar movimientos, se calcula el ancestro común y se respetan bloqueos de posición. No se copian buffers de píxeles ni se introduce otro formato; XCF utiliza grupos normales existentes.
+
+Se reutilizan gimp_image_get_layer_list, gimp_image_reorder_item y la suspensión de redimensionado de grupos para evitar recalcular el nuevo grupo tras cada inserción. El movimiento completo ocupa una sola entrada de undo. Las selecciones no contiguas necesariamente reúnen contenido antes separado; mover capas entre padres con máscaras, opacidad o filtros puede cambiar su aspecto. No se afirma que toda agrupación sea visualmente neutra.
+
+Referencia consultada el 2026-10-04: https://helpx.adobe.com/photoshop/desktop/create-manage-layers/create-layer-compositions/create-layers-and-layer-groups.html y https://helpx.adobe.com/sg/photoshop/desktop/create-manage-layers/transform-manipulate-layers/group-and-ungroup-layers.html. Las pruebas nuevas cubren orden contrario al clic, capas intermedias, undo/redo, padres distintos, selección de ancestro/descendiente y bloqueo. La aceptación visual y la comparación de composición siguen pendientes.
+
+## D013 — Verificar el perfil realmente utilizado
+
+La prueba smoke aceptaba GIMP_SMOKE_PROFILE relativo, pero GIMP interpreta GIMP3_DIRECTORY relativo a la carpeta personal. El lanzador preparaba el perfil en el proyecto mientras la prueba arrancaba con otro. Se detectó inspeccionando las rutas Parsing/Writing del registro nativo. smoke-linux.sh convierte ahora la ruta en absoluta antes de exportarla y exige evidencia de que GIMP leyó gimprc, sessionrc, toolrc y shortcutsrc desde ese directorio. El lanzador de uso normal ya resolvía rutas absolutas y no tenía este fallo. Se repitió el arranque con el perfil correcto y pasaron el parser y la salida GTK.
 
 ## Fuentes consultadas
 

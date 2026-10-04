@@ -324,6 +324,129 @@ adjustment_group_keeps_parent (GimpTestFixture *fixture,
   gimp_context_set_image (context, NULL);
 }
 
+static GimpLayer *
+group_test_layer (GimpImage *image,
+                  GimpLayer *parent,
+                  const char *name)
+{
+  GimpLayer *layer = gimp_layer_new (image, 10, 10,
+                                     babl_format ("R'G'B'A u8"), name,
+                                     GIMP_OPACITY_OPAQUE,
+                                     GIMP_LAYER_MODE_NORMAL);
+  gimp_image_add_layer (image, layer, parent, -1, FALSE);
+  return layer;
+}
+
+static void
+group_selected_order_undo (GimpTestFixture *fixture,
+                           gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpImage   *image = fixture->image;
+  GimpContext *context = gimp_get_user_context (gimp);
+  GimpLayer   *bottom = group_test_layer (image, NULL, "Bottom");
+  GimpLayer   *middle = group_test_layer (image, NULL, "Middle");
+  GimpLayer   *top = group_test_layer (image, NULL, "Top");
+  GimpLayer   *group;
+  GList       *selected = NULL;
+
+  gimp_context_set_image (context, image);
+  selected = g_list_append (selected, bottom);
+  selected = g_list_append (selected, top);
+  gimp_image_set_selected_layers (image, selected);
+  g_list_free (selected);
+  layers_group_selected_cmd_callback (NULL, NULL, gimp);
+  group = gimp_image_get_selected_layers (image)->data;
+  g_assert_true (GIMP_IS_GROUP_LAYER (group));
+  g_assert_cmpint (gimp_layer_get_mode (group), ==, GIMP_LAYER_MODE_PASS_THROUGH);
+  g_assert_true (gimp_layer_get_parent (top) == group);
+  g_assert_true (gimp_layer_get_parent (bottom) == group);
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (top)), ==, 0);
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (bottom)), ==, 1);
+  g_assert_null (gimp_layer_get_parent (middle));
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (group)), ==, 0);
+  g_assert_true (gimp_image_undo (image));
+  g_assert_null (gimp_layer_get_parent (top));
+  g_assert_null (gimp_layer_get_parent (bottom));
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (top)), ==, 0);
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (middle)), ==, 1);
+  g_assert_cmpint (gimp_item_get_index (GIMP_ITEM (bottom)), ==, 2);
+  g_assert_true (gimp_image_redo (image));
+  g_assert_true (gimp_layer_get_parent (top) == group);
+  g_assert_true (gimp_layer_get_parent (bottom) == group);
+  gimp_context_set_image (context, NULL);
+}
+
+static void
+group_selected_common_parent (GimpTestFixture *fixture,
+                              gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpImage   *image = fixture->image;
+  GimpContext *context = gimp_get_user_context (gimp);
+  GimpLayer   *outer = gimp_group_layer_new (image);
+  GimpLayer   *nested = gimp_group_layer_new (image);
+  GimpLayer   *a;
+  GimpLayer   *b;
+  GimpLayer   *group;
+  GList       *selected = NULL;
+
+  gimp_image_add_layer (image, outer, NULL, 0, FALSE);
+  gimp_image_add_layer (image, nested, outer, 0, FALSE);
+  a = group_test_layer (image, nested, "Nested child");
+  b = group_test_layer (image, outer, "Sibling");
+  gimp_context_set_image (context, image);
+  selected = g_list_append (selected, a);
+  selected = g_list_append (selected, b);
+  gimp_image_set_selected_layers (image, selected);
+  g_list_free (selected);
+  layers_group_selected_cmd_callback (NULL, NULL, gimp);
+  group = gimp_image_get_selected_layers (image)->data;
+  g_assert_true (gimp_layer_get_parent (group) == outer);
+  g_assert_true (gimp_layer_get_parent (a) == group);
+  g_assert_true (gimp_layer_get_parent (b) == group);
+  g_assert_true (gimp_layer_get_parent (nested) == outer);
+  g_assert_true (gimp_image_undo (image));
+  g_assert_true (gimp_layer_get_parent (a) == nested);
+  g_assert_true (gimp_layer_get_parent (b) == outer);
+  gimp_context_set_image (context, NULL);
+}
+
+static void
+group_selected_ancestor_and_lock (GimpTestFixture *fixture,
+                                  gconstpointer    data)
+{
+  Gimp        *gimp = GIMP (data);
+  GimpImage   *image = fixture->image;
+  GimpContext *context = gimp_get_user_context (gimp);
+  GimpLayer   *parent = gimp_group_layer_new (image);
+  GimpLayer   *child;
+  GimpLayer   *group;
+  GList       *selected = NULL;
+
+  gimp_image_add_layer (image, parent, NULL, 0, FALSE);
+  child = group_test_layer (image, parent, "Child");
+  gimp_context_set_image (context, image);
+  selected = g_list_append (selected, child);
+  selected = g_list_append (selected, parent);
+  gimp_image_set_selected_layers (image, selected);
+  g_list_free (selected);
+  gimp_item_set_lock_position (GIMP_ITEM (parent), TRUE, FALSE);
+  layers_group_selected_cmd_callback (NULL, NULL, gimp);
+  g_assert_cmpint (gimp_image_get_n_layers (image), ==, 2);
+  g_assert_null (gimp_layer_get_parent (parent));
+  gimp_item_set_lock_position (GIMP_ITEM (parent), FALSE, FALSE);
+  layers_group_selected_cmd_callback (NULL, NULL, gimp);
+  group = gimp_image_get_selected_layers (image)->data;
+  g_assert_true (gimp_layer_get_parent (parent) == group);
+  g_assert_true (gimp_layer_get_parent (child) == parent);
+  g_assert_null (gimp_layer_get_parent (group));
+  g_assert_true (gimp_image_undo (image));
+  g_assert_null (gimp_layer_get_parent (parent));
+  g_assert_true (gimp_layer_get_parent (child) == parent);
+  gimp_context_set_image (context, NULL);
+}
+
 int
 main (int    argc,
       char **argv)
@@ -345,6 +468,9 @@ main (int    argc,
   ADD_IMAGE_TEST (rotate_non_overlapping);
   ADD_IMAGE_TEST (adjustment_group_undo_redo);
   ADD_IMAGE_TEST (adjustment_group_keeps_parent);
+  ADD_IMAGE_TEST (group_selected_order_undo);
+  ADD_IMAGE_TEST (group_selected_common_parent);
+  ADD_IMAGE_TEST (group_selected_ancestor_and_lock);
   ADD_TEST (white_graypoint_in_red_levels);
 
   /* Run the tests */

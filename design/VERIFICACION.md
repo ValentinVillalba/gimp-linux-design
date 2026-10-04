@@ -1,4 +1,4 @@
-# Verificación de la primera etapa
+# Verificación del desarrollo
 
 Fecha: 2026-10-04. Base: GIMP_3_2_6, e101dd19b165f927d3ba0a74658a71537c5661b9.
 
@@ -32,3 +32,11 @@ La caché de compilación está en `/home/boowomp/.cache/gimp-linux-design/build
 ## Lo que aún no está verificado
 
 No hay aceptación visual humana, prueba de tableta/HiDPI, comparativas de rendimiento, recuperación ante fallos, corpus PSD/PSB ni impresión CMYK. El programa aún hereda rutas web/GIO de upstream que deben auditarse antes de declararlo completamente desconectado. No hay paquete final ni compatibilidad completa con Photoshop. La copia compilada es un build local de desarrollo para Linux.
+
+## Agrupación de capas seleccionadas
+
+El 2026-10-04 se compiló la acción Ctrl+G. Los tres casos nuevos internos de core pasaron: orden de pila y undo/redo con capas no contiguas, ancestro común entre padres distintos, y selección de grupo/descendiente con bloqueo de posición. La suite completa volvió a pasar (20 ejecutables correctos, cero fallos), incluido XCF, y los siete checks del perfil también pasaron.
+
+Evidencia en la carpeta testing-loop: `linux-build-grouping.log`, `linux-tests-grouping-full.log`, `linux-test-grouping-details.txt` y `linux-install-grouping.log`. Estos registros prueban jerarquía y comportamiento nativo; no prueban equivalencia visual de todos los casos de composición con Photoshop.
+
+Se comprobó el arranque instalado con `_design-profile-grouping`, tras corregir la ruta relativa del script smoke (D013). `_design-logs/linux-smoke.log` confirma lectura de los cuatro archivos desde la ruta absoluta del proyecto, sin errores de parser ni CRITICAL. La prueba ahora exige esa lectura, además de la salida correcta.

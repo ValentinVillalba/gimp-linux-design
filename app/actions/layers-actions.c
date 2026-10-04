@@ -94,6 +94,12 @@ static const GimpActionEntry layers_actions[] =
     layers_new_from_visible_cmd_callback,
     GIMP_HELP_LAYER_NEW_FROM_VISIBLE },
 
+  { "layers-group-selected", GIMP_ICON_FOLDER_NEW,
+    NC_("layers-action", "_Group Selected Layers"), NULL, { NULL },
+    NC_("layers-action", "Move selected layers into a new pass-through group"),
+    layers_group_selected_cmd_callback,
+    GIMP_HELP_LAYER_NEW },
+
   { "layers-new-group", GIMP_ICON_FOLDER_NEW,
     NC_("layers-action", "New Layer _Group"), NULL, { NULL },
     NC_("layers-action", "Create a new layer group and add it to the image"),
@@ -1042,6 +1048,7 @@ layers_actions_update (GimpActionGroup *group,
   SET_SENSITIVE ("layers-new",              image);
   SET_SENSITIVE ("layers-new-last-values",  image);
   SET_SENSITIVE ("layers-new-from-visible", image);
+  SET_SENSITIVE ("layers-group-selected", n_selected_layers > 0 && !indexed && !fs && !ac && all_movable);
   SET_SENSITIVE ("layers-new-group",        image && !indexed && !fs);
   SET_SENSITIVE ("layers-new-adjustment-group", image && !indexed && !fs && !ac);
   SET_SENSITIVE ("layers-duplicate",        n_selected_layers > 0 && !fs && !ac);

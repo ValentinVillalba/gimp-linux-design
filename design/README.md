@@ -13,7 +13,9 @@ Leer primero [DECISIONES.md](DECISIONES.md) y [PLAN.md](PLAN.md). [THIRD_PARTY.m
 - **Capa → Nuevo grupo de ajuste**, también disponible en el menú contextual de capas y con Ctrl+Alt+Shift+A. Crea un grupo vacío Pass through encima de la primera capa seleccionada, en su mismo nivel. Aplicar desde Colores un filtro no destructivo, por ejemplo niveles o curvas, dejando desmarcada la opción de fusionar el filtro. El efecto alcanza las capas inferiores dentro del ámbito de composición. Si se agregan capas al grupo, su comportamiento cambia al de un grupo ordinario con filtros: no usarlo como carpeta de contenido.
 - Ctrl+Alt+Shift+D abre la consola de errores.
 
-Los atajos invocan funciones de GIMP; no cambian sus algoritmos. Ctrl+J duplica una capa completa: aún no implementa «capa mediante copiar selección» de Photoshop. Ctrl+G no se reasignó: la operación existente «nuevo grupo» no agrupa las capas seleccionadas como en Photoshop. Ctrl+S conserva XCF y exportar sigue siendo una operación separada. Son diferencias explícitas, no paridad simulada.
+Ctrl+G ejecuta **Agrupar capas seleccionadas**: mueve las capas a un grupo Pass through, conserva su orden en la pila y selecciona el grupo. Cuando la selección atraviesa carpetas, se usa el ancestro común más cercano. Si están seleccionados un grupo y sus descendientes, se mueve el grupo completo una sola vez. Los bloqueos de posición impiden la operación. Deshacer restaura las posiciones anteriores en un solo paso. Las capas no contiguas quedan juntas; esto cambia su relación con las capas intermedias. Mover contenido fuera de un grupo con máscaras/filtros también puede cambiar la composición, igual que al reorganizarlo manualmente.
+
+Ctrl+J duplica una capa completa: aún no implementa «capa mediante copiar selección» de Photoshop. Ctrl+S conserva XCF y exportar sigue siendo una operación separada. Son diferencias explícitas, no paridad simulada. Los perfiles ya creados conservan sus atajos; para probar Ctrl+G con valores nuevos, usar un perfil nuevo o asignarlo desde Preferencias.
 
 ## Probar el perfil sin compilar
 

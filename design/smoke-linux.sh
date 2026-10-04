@@ -9,6 +9,9 @@ profile=${GIMP_SMOKE_PROFILE:-"$source_root/_design-profile-linux-smoke"}
 log="$source_root/_design-logs/linux-smoke.log"
 mkdir -p "$source_root/_design-logs"
 python3 "$source_root/design/launch.py" --prepare-only --profile "$profile"
+# GIMP resolves a relative GIMP3_DIRECTORY against the user's home directory.
+# Use the same absolute directory that the launcher prepared.
+profile=$(cd -- "$profile" && pwd)
 export GIMP3_DIRECTORY="$profile"
 export GDK_BACKEND=x11
 export LD_LIBRARY_PATH="$libdir:$install_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -18,10 +21,15 @@ export GEGL_PATH=${GEGL_PATH:-"$(pkg-config --variable=libdir gegl-0.4)/gegl-0.4
 timeout 60s xvfb-run -a "$install_prefix/bin/gimp-3.2" \
     --new-instance --verbose --no-splash \
     --batch-interpreter=plug-in-script-fu-eval --batch='(gimp-quit 0)' > "$log" 2>&1
-if python3 - "$log" <<'PY'
+if python3 - "$log" "$profile" <<'PY'
 import sys
 from pathlib import Path
 text = Path(sys.argv[1]).read_text(errors="replace")
+profile = Path(sys.argv[2])
+for name in ("gimprc", "sessionrc", "toolrc", "shortcutsrc"):
+    if f"Parsing '{profile / name}'" not in text:
+        print(f"Expected profile file was not parsed: {profile / name}", file=sys.stderr)
+        sys.exit(1)
 errors = ("duplicate accelerator", "not existing action", "invalid accelerator",
           "Failed reading", "Error parsing", "Error while parsing",
           "missing tools in toolrc", "CRITICAL")

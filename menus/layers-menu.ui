@@ -46,6 +46,7 @@
       <section>
         <item><attribute name="action">app.layers-new</attribute></item>
         <item><attribute name="action">app.layers-new-from-visible</attribute></item>
+        <item><attribute name="action">app.layers-group-selected</attribute></item>
         <item><attribute name="action">app.layers-new-group</attribute></item>
         <item><attribute name="action">app.layers-new-adjustment-group</attribute></item>
     <!--

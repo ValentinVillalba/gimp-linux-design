@@ -622,6 +622,96 @@ layers_new_adjustment_group_cmd_callback (GimpAction *action,
 }
 
 void
+layers_group_selected_cmd_callback (GimpAction *action,
+                                    GVariant   *value,
+                                    gpointer    data)
+{
+  GimpImage  *image;
+  GList      *selected;
+  GList      *stack;
+  GList      *layers = NULL;
+  GList      *iter;
+  GHashTable *selection;
+  GimpItem   *parent;
+  GimpLayer  *group;
+  gint        position = G_MAXINT;
+
+  return_if_no_layers (image, selected, data);
+
+  if (gimp_image_get_base_type (image) == GIMP_INDEXED ||
+      gimp_image_get_floating_selection (image) ||
+      gimp_image_get_selected_channels (image))
+    return;
+
+  selection = g_hash_table_new (g_direct_hash, g_direct_equal);
+  for (iter = selected; iter; iter = iter->next)
+    {
+      if (gimp_item_is_position_locked (iter->data, NULL))
+        {
+          g_hash_table_unref (selection);
+          return;
+        }
+      g_hash_table_add (selection, iter->data);
+    }
+
+  /* Walk the existing stack, not selection click order. A selected group
+   * already carries its descendants; never move them a second time.
+   */
+  stack = gimp_image_get_layer_list (image);
+  for (iter = stack; iter; iter = iter->next)
+    if (g_hash_table_contains (selection, iter->data))
+      {
+        GimpItem *ancestor;
+
+        for (ancestor = gimp_item_get_parent (iter->data); ancestor;
+             ancestor = gimp_item_get_parent (ancestor))
+          if (g_hash_table_contains (selection, ancestor))
+            break;
+
+        if (! ancestor)
+          layers = g_list_prepend (layers, iter->data);
+      }
+  g_list_free (stack);
+  g_hash_table_unref (selection);
+  layers = g_list_reverse (layers);
+  if (! layers)
+    return;
+
+  /* Find the nearest common parent, then insert above the highest branch. */
+  parent = gimp_item_get_parent (layers->data);
+  for (iter = layers->next; iter && parent; iter = iter->next)
+    while (parent && ! gimp_viewable_is_ancestor (GIMP_VIEWABLE (parent),
+                                                GIMP_VIEWABLE (iter->data)))
+      parent = gimp_item_get_parent (parent);
+
+  for (iter = layers; iter; iter = iter->next)
+    {
+      GimpItem *branch = iter->data;
+
+      while (gimp_item_get_parent (branch) != parent)
+        branch = gimp_item_get_parent (branch);
+      position = MIN (position, gimp_item_get_index (branch));
+    }
+
+  gimp_image_undo_group_start (image, GIMP_UNDO_GROUP_LAYER_ADD,
+                               _("Group selected layers"));
+  group = gimp_group_layer_new (image);
+  gimp_layer_set_mode (group, GIMP_LAYER_MODE_PASS_THROUGH, FALSE);
+  gimp_image_add_layer (image, group, GIMP_LAYER (parent), position, TRUE);
+  gimp_group_layer_suspend_resize (GIMP_GROUP_LAYER (group), TRUE);
+  for (iter = layers, position = 0; iter; iter = iter->next, position++)
+    gimp_image_reorder_item (image, iter->data, GIMP_ITEM (group),
+                             position, TRUE, NULL);
+  gimp_group_layer_resume_resize (GIMP_GROUP_LAYER (group), TRUE);
+  selected = g_list_prepend (NULL, group);
+  gimp_image_set_selected_layers (image, selected);
+  g_list_free (selected);
+  g_list_free (layers);
+  gimp_image_undo_group_end (image);
+  gimp_image_flush (image);
+}
+
+void
 layers_new_group_cmd_callback (GimpAction *action,
                                GVariant   *value,
                                gpointer    data)

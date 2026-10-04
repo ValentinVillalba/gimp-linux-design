@@ -39,8 +39,10 @@ Archivos PSD y otros formatos son entrada no confiable: tamaños, offsets, profu
 
 ## Estado al 2026-10-04
 
-Investigación y planificación inicial terminadas. La etapa 1 tiene herramientas/paneles adaptados, 39 asociaciones de teclas y un lanzador de perfil aislado. Se agregó el acceso nativo «Nuevo grupo de ajuste» reutilizando grupos Pass through; no es una implementación completa de las capas de ajuste de Photoshop.
+Investigación y planificación inicial terminadas. La etapa 1 tiene herramientas/paneles adaptados, 40 asociaciones de teclas y un lanzador de perfil aislado. Se agregó el acceso nativo «Nuevo grupo de ajuste» reutilizando grupos Pass through; no es una implementación completa de las capas de ajuste de Photoshop.
 
-Se compiló en Ubuntu 26.04.1 WSL con GCC 15, Meson/Ninja y dependencias de distribución. Pasaron las 20 pruebas habilitadas en esta configuración, incluidas las dos nuevas del grupo de ajuste; también los seis checks del perfil. Falta aceptación visual, tableta, mediciones de rendimiento y corpus PSD. Ninguna otra función avanzada de la tabla se considera implementada por documentarla.
+Se compiló en Ubuntu 26.04.1 WSL con GCC 15, Meson/Ninja y dependencias de distribución. Pasaron las 20 pruebas habilitadas en esta configuración, incluidas las dos nuevas del grupo de ajuste y tres de agrupación de capas seleccionadas; también los siete checks del perfil. La suite Meson cuenta ejecutables de prueba; core contiene varios casos internos. Falta aceptación visual, tableta, mediciones de rendimiento y corpus PSD. Ninguna otra función avanzada de la tabla se considera implementada por documentarla.
 
-Siguiente trabajo: cerrar la aceptación del perfil y revisar las rutas de red heredadas; luego implementar agrupación de capas seleccionadas y «capa mediante copiar selección» con pruebas de jerarquía/undo/offsets. Antes de ampliar capas de ajuste, comprobar la composición y XCF con filtros, máscaras y grupos reales.
+Ctrl+G agrupa ahora las capas seleccionadas mediante una acción nativa, con orden de pila, ancestro común, protección de bloqueos y undo/redo. Está disponible en ambos menús de capas. No está implementado todavía desagrupar con Ctrl+Shift+G.
+
+Siguiente trabajo: cerrar la aceptación del perfil y revisar las rutas de red heredadas; implementar «capa mediante copiar selección» con pruebas de máscara/undo/offsets y desagrupar preservando la jerarquía. Antes de ampliar capas de ajuste, comprobar la composición y XCF con filtros, máscaras y grupos reales.

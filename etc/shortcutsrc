@@ -26,6 +26,7 @@
 (action "tools-zoom" "z")
 (action "quick-mask-toggle" "q")
 (action "tools-unified-transform" "<Primary>t")
+(action "layers-group-selected" "<Primary>g")
 (action "layers-duplicate" "<Primary>j")
 (action "layers-new" "<Primary><Shift>n")
 (action "layers-new-adjustment-group" "<Primary><Alt><Shift>a")
