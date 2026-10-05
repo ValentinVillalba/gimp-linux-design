@@ -54,10 +54,12 @@
 #include "core/gimpgrouplayer.h"
 #include "core/gimpguide.h"
 #include "core/gimpimage.h"
+#include "core/gimpimage-undo.h"
 #include "core/gimpimage-grid.h"
 #include "core/gimpimage-guides.h"
 #include "core/gimpimage-sample-points.h"
 #include "core/gimplayer.h"
+#include "core/gimplayermask.h"
 #include "core/gimplayer-new.h"
 #include "core/gimpsamplepoint.h"
 #include "core/gimpselection.h"
@@ -1020,14 +1022,16 @@ gimp_assert_mainimage (GimpImage *image,
  **/
 static void
 assert_adjustment_pixel (GimpImage *image,
+                         gint       x,
                          gfloat     expected)
 {
   gfloat pixel[4];
 
+  gimp_test_run_mainloop_until_idle ();
   gimp_image_flush (image);
   gimp_pickable_flush (GIMP_PICKABLE (gimp_image_get_projection (image)));
   gegl_buffer_get (gimp_pickable_get_buffer (GIMP_PICKABLE (gimp_image_get_projection (image))),
-                   GEGL_RECTANGLE (2, 2, 1, 1), 1.0, babl_format ("RGBA float"),
+                   GEGL_RECTANGLE (x, 2, 1, 1), 1.0, babl_format ("RGBA float"),
                    pixel, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
   g_assert_cmpfloat_with_epsilon (pixel[0], expected, 0.01);
   g_assert_cmpfloat_with_epsilon (pixel[1], expected, 0.01);
@@ -1048,6 +1052,8 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
   GeglColor *white = gegl_color_new ("white");
   GeglNode *operation = gegl_node_new_child (NULL, "operation", "gegl:invert-linear", NULL);
   GimpDrawableFilter *filter;
+  GimpLayerMask *mask;
+  gfloat mask_row[10] = { 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
 
   gimp_image_add_layer (image, source, NULL, 0, FALSE);
   gegl_buffer_set_color (gimp_drawable_get_buffer (GIMP_DRAWABLE (source)), NULL, white);
@@ -1062,7 +1068,33 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
   gimp_drawable_filter_layer_mask_freeze (filter);
   g_object_unref (filter);
   g_object_unref (operation);
-  assert_adjustment_pixel (image, 0.5);
+  assert_adjustment_pixel (image, 2, 0.5);
+  mask = gimp_layer_create_mask (group, GIMP_ADD_MASK_WHITE, NULL);
+  g_assert_nonnull (mask);
+  g_assert_cmpint (gimp_item_get_width (GIMP_ITEM (mask)), ==, 10);
+  g_assert_cmpint (gimp_item_get_height (GIMP_ITEM (mask)), ==, 10);
+  g_assert_nonnull (gimp_layer_add_mask (group, mask, FALSE, TRUE, NULL));
+  gegl_buffer_set (gimp_drawable_get_buffer (GIMP_DRAWABLE (mask)),
+                   GEGL_RECTANGLE (0, 2, 10, 1), 0, babl_format ("Y float"),
+                   mask_row, GEGL_AUTO_ROWSTRIDE);
+  gimp_drawable_update (GIMP_DRAWABLE (mask), 0, 2, 10, 1);
+  assert_adjustment_pixel (image, 2, 0.5);
+  assert_adjustment_pixel (image, 1, 0.75);
+  assert_adjustment_pixel (image, 7, 1.0);
+  g_assert_true (gimp_image_undo (image));
+  g_assert_null (gimp_layer_get_mask (group));
+  assert_adjustment_pixel (image, 7, 0.5);
+  g_assert_true (gimp_image_redo (image));
+  g_assert_true (gimp_layer_get_mask (group) == mask);
+  assert_adjustment_pixel (image, 1, 0.75);
+  assert_adjustment_pixel (image, 7, 1.0);
+  /* Paint after the projection has already been rendered. */
+  mask_row[1] = 0.25;
+  gegl_buffer_set (gimp_drawable_get_buffer (GIMP_DRAWABLE (mask)),
+                   GEGL_RECTANGLE (1, 2, 1, 1), 0, babl_format ("Y float"),
+                   &mask_row[1], GEGL_AUTO_ROWSTRIDE);
+  gimp_drawable_update (GIMP_DRAWABLE (mask), 1, 2, 1, 1);
+  assert_adjustment_pixel (image, 1, 0.875);
 
   for (gint compression = 0; compression < 2; compression++)
     {
@@ -1074,6 +1106,7 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
       GimpLayer *loaded_group;
       GimpLayer *loaded_source;
       GimpDrawableFilter *loaded_filter;
+      GimpLayerMask *loaded_mask;
       gchar *operation_name = NULL;
       GError *error = NULL;
       gfloat original[4];
@@ -1099,6 +1132,10 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
       g_assert_true (GIMP_IS_GROUP_LAYER (loaded_group));
       g_assert_cmpstr (gimp_object_get_name (loaded_group), ==, "Adjustment");
       g_assert_cmpint (gimp_layer_get_mode (loaded_group), ==, GIMP_LAYER_MODE_PASS_THROUGH);
+      loaded_mask = gimp_layer_get_mask (loaded_group);
+      g_assert_nonnull (loaded_mask);
+      g_assert_cmpint (gimp_item_get_width (GIMP_ITEM (loaded_mask)), ==, 10);
+      g_assert_cmpint (gimp_item_get_height (GIMP_ITEM (loaded_mask)), ==, 10);
       g_assert_cmpint (gimp_container_get_n_children (gimp_drawable_get_filters (GIMP_DRAWABLE (loaded_group))), ==, 1);
       loaded_filter = GIMP_DRAWABLE_FILTER (gimp_container_get_child_by_index (
                          gimp_drawable_get_filters (GIMP_DRAWABLE (loaded_group)), 0));
@@ -1111,11 +1148,15 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
                        GEGL_RECTANGLE (2, 2, 1, 1), 1.0, babl_format ("RGBA float"),
                        original, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
       g_assert_cmpfloat_with_epsilon (original[0], 1.0, 0.01);
-      assert_adjustment_pixel (loaded, 0.5);
+      assert_adjustment_pixel (loaded, 2, 0.5);
+      assert_adjustment_pixel (loaded, 1, 0.875);
+      assert_adjustment_pixel (loaded, 7, 1.0);
       gimp_filter_set_active (GIMP_FILTER (loaded_filter), FALSE);
-      assert_adjustment_pixel (loaded, 1.0);
+      assert_adjustment_pixel (loaded, 2, 1.0);
       gimp_filter_set_active (GIMP_FILTER (loaded_filter), TRUE);
-      assert_adjustment_pixel (loaded, 0.5);
+      assert_adjustment_pixel (loaded, 2, 0.5);
+      assert_adjustment_pixel (loaded, 1, 0.875);
+      assert_adjustment_pixel (loaded, 7, 1.0);
       g_assert_true (g_file_delete (file, NULL, &error));
       g_assert_no_error (error);
       g_object_unref (file);

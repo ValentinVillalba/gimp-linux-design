@@ -95,6 +95,8 @@ Registros raíz: linux-build-local-help-preferences.log y linux-tests-local-help
 
 ## Composición y undo de grupo de ajuste — 2026-10-04
 
+Corrección posterior: la sección de máscaras y D023 revisan este diagnóstico. La preparación omitía procesar eventos; el parche de reconstrucción se retiró después de verificar las pruebas con el ciclo normal de eventos.
+
 La nueva prueba core aplica invert-linear a un grupo vacío Pass through sobre una capa blanca. Comprueba proyección negra opaca, buffer original blanco, filtro retirado por undo, proyección blanca tras undo y negra tras redo. La preparación usa registro nativo de undo y flush de imagen. La lectura de proyección falló inicialmente aunque el grafo directo devolvía el valor correcto; se corrigió la reconstrucción tras cambiar la representación efectiva del grupo en gimpgrouplayer.c. Las alternativas de invalidación de área no pasaron y no se conservaron.
 
 Compilación Linux y suite Meson: 20 ejecutables correctos, 0 fallos; core incluye el nuevo caso. Se actualizó el ejecutable del prefijo aislado. El smoke pasó con _design-profile-adjustment-composition y perfil comprobado. Registros raíz: linux-build-adjustment-composition.log, linux-tests-adjustment-composition.log y linux-test-adjustment-composition-details.txt.
@@ -108,3 +110,11 @@ Se añadió adjustment_group_xcf_roundtrip a la suite nativa XCF. Usa imagen flo
 Compilación Linux correcta. La prueba XCF y luego la suite Meson completa pasaron: 20 ejecutables, 0 fallos. Registros raíz: linux-build-adjustment-xcf.log, linux-tests-adjustment-xcf.log y linux-test-adjustment-xcf-details.txt. No cambió el ejecutable del producto; no se repitió smoke, porque el cambio sólo agrega pruebas y documentación.
 
 Cobertura limitada al caso descrito: no demuestra máscaras de ajuste, curvas/niveles, grupos anidados, múltiples efectos, PSD ni aceptación visual de controles. D022 registra que puede reutilizarse el formato nativo para este caso sin añadir un formato alternativo.
+
+## Máscaras y sincronización de pruebas — 2026-10-04
+
+La prueba XCF ahora incluye máscara 10×10 con blanco, negro y valores parciales, undo/redo de adición y modificación después de renderizar. Comprueba RGB/alfa de los resultados 0.5, 0.75, 1 y 0.875, antes y después de XCF con/sin compresión. Tras cargar también desactiva/reactiva el filtro permanente y verifica la composición.
+
+La preparación anterior leía antes de procesar notificaciones pendientes. Se agregó gimp_test_run_mainloop_until_idle, existente en el proyecto, a las lecturas de composición de core y XCF. Se retiró del producto la reconstrucción de proyección añadida en D021; también se retiró el manejador experimental de máscara, que no se llegó a publicar. El código nativo pasa estos casos con el ciclo de eventos correcto. La prueba no usa reconstrucción forzada ni sleeps fijos.
+
+Compilación Linux y Meson: 20 ejecutables correctos, 0 fallos. Se actualizó el ejecutable del prefijo aislado y pasó el smoke con _design-profile-adjustment-mask. Registros raíz: linux-build-adjustment-mask.log, linux-tests-adjustment-mask.log y linux-test-adjustment-mask-details.txt. Falta aceptación visual, offsets/cambio de tamaño, grupos anidados, controles y mediciones de rendimiento. D023 corrige explícitamente el diagnóstico histórico de D021.

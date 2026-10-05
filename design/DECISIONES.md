@@ -146,6 +146,8 @@ La compilación y suite verifican integración y regresiones generales. Falta ab
 
 ## D021 — Comprobar la composición antes de ampliar ajustes
 
+Nota posterior: D023 corrige el diagnóstico de caché de esta entrada y retira el parche de reconstrucción tras verificar el ciclo de eventos de las pruebas. Se conserva este registro para explicar la decisión original.
+
 Se revisaron el grupo nativo, GimpDrawableFilter y la proyección de imagen. El acceso «Nuevo grupo de ajuste» todavía crea únicamente un contenedor Pass through. Antes de añadir controles de ajuste se incorporó una prueba de píxeles reales: capa blanca inferior, grupo vacío arriba, filtro permanente invert-linear. La proyección debe ser negra opaca mientras el buffer original sigue blanco. Deshacer el filtro devuelve la composición blanca; rehacer devuelve la negra.
 
 La preparación reproduce el registro nativo de undo del filtro, que se realiza separadamente de gimp_drawable_filter_commit, y la actualización de imagen de la acción de deshacer. Con este ciclo completo apareció una regresión de proyección: el filtro se retiraba de la pila y el grafo directo calculaba blanco, pero las lecturas de la proyección conservaban el negro anterior; al rehacer también podía conservarse la imagen previa. Invalidar sólo áreas no resolvió el caso. Se corrigió la transición efectiva del grupo entre Pass through y su representación normal reducida, avisando del cambio de estructura de la imagen después de reconectar sus nodos. La proyección descarta los tiles de la estructura anterior. La corrección central cubre las transiciones independientemente de qué acción las origine.
@@ -161,6 +163,16 @@ Se revisó y reutilizó la infraestructura de test-xcf.c, file_save, file_open_i
 El caso guarda y reabre XCF con y sin compresión. Comprueba estructura y orden de capas, nombre/modo del grupo, filtro permanente, operación GEGL, intensidad 0.5, buffer original blanco y composición gris. Después desactiva el filtro cargado y comprueba blanco; lo reactiva y comprueba gris. Esto verifica que XCF conserva el efecto editable, sin hornearlo en la capa original, para este caso concreto.
 
 No hizo falta crear un formato, cargador ni implementación alternativa del filtro. No se copiaron archivos de Photoshop ni se añadieron dependencias. Falta ampliar a máscaras, ajustes con parámetros como curvas/niveles, grupos anidados, varios efectos y PSD. El estado se limita a la composición comprobada; no se infiere paridad de capas de ajuste por un roundtrip correcto.
+
+## D023 — Máscaras verificadas y corrección de la preparación de pruebas
+
+Se revisaron gimp_layer_create_mask, gimp_layer_add_mask y la composición del grupo. Upstream ya calcula el tamaño de máscaras de grupos vacíos desde su bounding box; no se agregó una capa raster de relleno ni una máscara paralela. La prueba XCF se amplió con máscara blanca de 10×10 y zonas de valores 1, 0.5 y 0. En la inversión al 50% se comprueban resultados 0.5, 0.75 y 1, todos opacos. Incluye deshacer/rehacer la adición y modificar la máscara después de renderizar, con valor 0.25 y resultado 0.875. Reabre XCF con/sin compresión y verifica la composición y desactivación/reactivación del filtro.
+
+La edición posterior falló al leer la proyección inmediatamente. Se revisó la utilidad existente gimp_test_run_mainloop_until_idle y se incorporó a las lecturas para procesar eventos pendientes antes de flush/render. Con ese ciclo normal, la prueba pasó. Se comprobó además retirando tanto el manejador de máscara experimental como la reconstrucción de proyección añadida en D021: la composición, undo/redo, edición de máscara y XCF siguen pasando con el código nativo.
+
+Esto corrige la interpretación de D021: las lecturas de sus pruebas omitían procesar el bucle de eventos, y la reconstrucción añadida no era necesaria para el comportamiento comprobado. Se retiró del producto en vez de mantener un coste de reconstrucción no justificado. Las pruebas conservan la utilidad nativa de sincronización, sin sleeps fijos ni cambios en el render. No se declara que todo problema de caché sea imposible; esta evidencia sólo corrige el diagnóstico y el parche de aquel caso.
+
+No se añadió dependencia ni formato. Falta comprobar máscaras con offsets, cambios de tamaño del documento, grupos anidados, varios ajustes y rendimiento en documentos grandes. Las pruebas no equivalen a interacción visual con pincel/tableta. Se consultó también el contrato de buffers GEGL (https://developer.gimp.org/api/gegl/class.Buffer.html); no se añadió flush de disco para resolver notificaciones de render.
 
 ## Fuentes consultadas
 

@@ -494,6 +494,7 @@ adjustment_group_filters_backdrop (GimpTestFixture *fixture,
   gimp_image_undo_push_filter_add (image, "Invert", GIMP_DRAWABLE (adjustment), filter);
   g_object_unref (filter);
   g_object_unref (operation);
+  gimp_test_run_mainloop_until_idle ();
   gimp_image_flush (image);
   gimp_pickable_flush (GIMP_PICKABLE (gimp_image_get_projection (image)));
   gegl_buffer_get (gimp_pickable_get_buffer (GIMP_PICKABLE (gimp_image_get_projection (image))),
@@ -507,6 +508,7 @@ adjustment_group_filters_backdrop (GimpTestFixture *fixture,
   g_assert_cmpfloat_with_epsilon (pixel[0], 1.0, 0.01);
   g_assert_true (gimp_image_undo (image));
   g_assert_cmpint (gimp_container_get_n_children (gimp_drawable_get_filters (GIMP_DRAWABLE (adjustment))), ==, 0);
+  gimp_test_run_mainloop_until_idle ();
   gimp_image_flush (image);
   gimp_pickable_flush (GIMP_PICKABLE (gimp_image_get_projection (image)));
   gegl_buffer_get (gimp_pickable_get_buffer (GIMP_PICKABLE (gimp_image_get_projection (image))),
@@ -514,6 +516,7 @@ adjustment_group_filters_backdrop (GimpTestFixture *fixture,
                    pixel, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
   g_assert_cmpfloat_with_epsilon (pixel[0], 1.0, 0.01);
   g_assert_true (gimp_image_redo (image));
+  gimp_test_run_mainloop_until_idle ();
   gimp_image_flush (image);
   gimp_pickable_flush (GIMP_PICKABLE (gimp_image_get_projection (image)));
   gegl_buffer_get (gimp_pickable_get_buffer (GIMP_PICKABLE (gimp_image_get_projection (image))),

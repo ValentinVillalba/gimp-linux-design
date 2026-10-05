@@ -64,3 +64,5 @@ La prueba nativa de composición del grupo de ajuste comprueba filtro sobre el f
 La prueba de composición detectó tiles obsoletos al cambiar la representación efectiva del grupo. Se corrigió la transición central del grafo para que la proyección se reconstruya; se conserva el render diferido de GEGL y queda pendiente medir el coste en documentos grandes.
 
 Se comprobó el roundtrip XCF del grupo de ajuste con filtro permanente e intensidad 0.5, con/sin compresión. Se conservan capas originales, composición y activación editable. Continúan pendientes máscaras, curvas/niveles, grupos anidados y varios efectos; no se necesita un formato nuevo para este caso.
+
+Se comprobó máscara blanca/negra/parcial, undo/redo de adición, edición después de renderizar y XCF con/sin compresión. Procesar el bucle de eventos en las pruebas permitió retirar la reconstrucción añadida en D021: el código nativo pasa esos casos. Este estado corrige la interpretación anterior. Quedan pendientes offsets/tamaños, grupos anidados y controles de curvas/niveles.
