@@ -174,6 +174,18 @@ Esto corrige la interpretación de D021: las lecturas de sus pruebas omitían pr
 
 No se añadió dependencia ni formato. Falta comprobar máscaras con offsets, cambios de tamaño del documento, grupos anidados, varios ajustes y rendimiento en documentos grandes. Las pruebas no equivalen a interacción visual con pincel/tableta. Se consultó también el contrato de buffers GEGL (https://developer.gimp.org/api/gegl/class.Buffer.html); no se añadió flush de disco para resolver notificaciones de render.
 
+## D024 — Verificar parámetros nativos de Niveles antes de conectar controles
+
+Se revisaron GimpLevelsConfig, gimp_operation_config_sync_node/connect_node, el editor GimpFilterTool y la apertura de filtros existentes en gimpdrawabletreeview-filters.c. El editor nativo puede volver a abrir un filtro permanente con GimpGeglProcedure(existing_filter). Se propone reutilizar ese flujo para los controles de ajustes, sin crear un motor de curvas/niveles ni duplicar sus widgets. La propuesta todavía no está implementada en el menú.
+
+La prueba XCF existente se convirtió en una preparación compartida para inversión lineal y Niveles. El nuevo caso usa gimp:levels con GimpLevelsConfig real. Comprueba valores iniciales neutros; después establece high-output=0 para obtener negro conocido, aplica intensidad 0.5 y conserva las comprobaciones de máscara parcial, undo/redo de su adición, edición posterior y buffer original. Guarda/reabre con y sin compresión, verifica tipo de configuración y parámetro 0, lo cambia a 1 y comprueba imagen blanca, y lo devuelve a 0 comprobando el efecto enmascarado. No se hornea el ajuste.
+
+La primera lectura tras cambiar el objeto de configuración seguía mostrando la imagen previa. El código del editor conecta notify del config a gimp_operation_config_sync_node: cambiar sólo un campo no reproduce ese contrato con GEGL. La prueba llama a esa función nativa antes de apply. Pasa sin parchear el render o forzar reconstrucciones. La primera ejecución fallida y la ejecución corregida distinguen un error de preparación de una regresión del producto.
+
+La siguiente acción de interfaz deberá crear grupo/filtro/máscara como una sola operación undo y abrir el editor del filtro existente. Antes debe comprobarse selección activa (evitar aplicarla dos veces), bounds vacíos y offsets: gimp_layer_create_mask obtiene tamaño del bounding box del grupo, y gimp_layer_mask_set_layer copia su offset. No basta contar capas para garantizar un área válida. Cancelar el editor después de crear un ajuste debe tener una semántica explícita y comprobada; no se da por verificado ese flujo.
+
+No se añadieron dependencias, conexiones ni IA. La prueba verifica parámetros del modelo y XCF, no interacción visual con controles, máscaras desplazadas, Curvas, Brillo/Contraste ni paridad Photoshop.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/

@@ -118,3 +118,11 @@ La prueba XCF ahora incluye máscara 10×10 con blanco, negro y valores parciale
 La preparación anterior leía antes de procesar notificaciones pendientes. Se agregó gimp_test_run_mainloop_until_idle, existente en el proyecto, a las lecturas de composición de core y XCF. Se retiró del producto la reconstrucción de proyección añadida en D021; también se retiró el manejador experimental de máscara, que no se llegó a publicar. El código nativo pasa estos casos con el ciclo de eventos correcto. La prueba no usa reconstrucción forzada ni sleeps fijos.
 
 Compilación Linux y Meson: 20 ejecutables correctos, 0 fallos. Se actualizó el ejecutable del prefijo aislado y pasó el smoke con _design-profile-adjustment-mask. Registros raíz: linux-build-adjustment-mask.log, linux-tests-adjustment-mask.log y linux-test-adjustment-mask-details.txt. Falta aceptación visual, offsets/cambio de tamaño, grupos anidados, controles y mediciones de rendimiento. D023 corrige explícitamente el diagnóstico histórico de D021.
+
+## Niveles editable y XCF — 2026-10-04
+
+- Compilación incremental Linux WSL correcta; registro local `_design-logs/linux-build-adjustment-levels.log`.
+- `meson test -C /home/boowomp/.cache/gimp-linux-design/build xcf --print-errorlogs`: 1 ejecutable correcto, 0 fallos; 6 casos internos, incluido `adjustment_levels_xcf_roundtrip`. Registro local `_design-logs/linux-test-adjustment-levels.log`; detalle en `meson-logs/testlog.txt` del build.
+- Se verificaron parámetros iniciales neutros, high-output=0, composición de máscara a intensidad 0.5, undo/redo de máscara, edición tras render, XCF con/sin compresión y modificación de parámetros cargados. La preparación de inversión existente se conserva mediante un helper compartido.
+- La primera ejecución falló por omitir la sincronización config → nodo que usa el editor nativo; se corrigió la prueba reutilizando gimp_operation_config_sync_node. No se cambió el código de render.
+- Esta modificación afecta pruebas y documentación. No necesita reinstalar el ejecutable; no se repitió smoke porque no hay cambios del producto. No se afirma aceptación visual de los controles ni selección/offsets verificados.

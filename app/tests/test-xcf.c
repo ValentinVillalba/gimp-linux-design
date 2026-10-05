@@ -40,6 +40,9 @@
 
 #include "widgets/gimpuimanager.h"
 
+#include "operations/gimp-operation-config.h"
+#include "operations/gimplevelsconfig.h"
+
 #include "core/gimp.h"
 #include "core/gimpchannel.h"
 #include "core/gimpchannel-select.h"
@@ -1040,9 +1043,9 @@ assert_adjustment_pixel (GimpImage *image,
 }
 
 static void
-adjustment_group_xcf_roundtrip (gconstpointer data)
+adjustment_group_roundtrip (Gimp     *gimp,
+                            gboolean  levels)
 {
-  Gimp *gimp = GIMP (data);
   GimpImage *image = gimp_image_new (gimp, 10, 10, GIMP_RGB,
                                     GIMP_PRECISION_FLOAT_LINEAR);
   GimpLayer *source = gimp_layer_new (image, 10, 10, babl_format ("RGBA float"),
@@ -1050,7 +1053,9 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
                                      GIMP_LAYER_MODE_NORMAL);
   GimpLayer *group = gimp_group_layer_new (image);
   GeglColor *white = gegl_color_new ("white");
-  GeglNode *operation = gegl_node_new_child (NULL, "operation", "gegl:invert-linear", NULL);
+  const gchar *operation_name = levels ? "gimp:levels" : "gegl:invert-linear";
+  GeglNode *operation = gegl_node_new_child (NULL, "operation", operation_name, NULL);
+  GimpLevelsConfig *config = NULL;
   GimpDrawableFilter *filter;
   GimpLayerMask *mask;
   gfloat mask_row[10] = { 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
@@ -1061,11 +1066,26 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
   gimp_object_set_name (GIMP_OBJECT (group), "Adjustment");
   gimp_layer_set_mode (group, GIMP_LAYER_MODE_PASS_THROUGH, FALSE);
   gimp_image_add_layer (image, group, NULL, 0, FALSE);
-  filter = gimp_drawable_filter_new (GIMP_DRAWABLE (group), "Invert", operation, NULL);
+  filter = gimp_drawable_filter_new (GIMP_DRAWABLE (group),
+                                     levels ? "Levels" : "Invert", operation, NULL);
+  if (levels)
+    {
+      config = g_object_new (GIMP_TYPE_LEVELS_CONFIG, NULL);
+      gegl_node_set (operation, "config", config, NULL);
+    }
   gimp_drawable_filter_set_opacity (filter, 0.5);
   gimp_drawable_filter_apply (filter, NULL);
   g_assert_true (gimp_drawable_filter_commit (filter, TRUE, NULL, FALSE));
   gimp_drawable_filter_layer_mask_freeze (filter);
+  if (levels)
+    {
+      /* Defaults preserve the image; changing the native setting stays editable. */
+      assert_adjustment_pixel (image, 2, 1.0);
+      g_object_set (config, "high-output", 0.0, NULL);
+      gimp_operation_config_sync_node (G_OBJECT (config), operation);
+      gimp_drawable_filter_apply (filter, NULL);
+      g_object_unref (config);
+    }
   g_object_unref (filter);
   g_object_unref (operation);
   assert_adjustment_pixel (image, 2, 0.5);
@@ -1107,7 +1127,7 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
       GimpLayer *loaded_source;
       GimpDrawableFilter *loaded_filter;
       GimpLayerMask *loaded_mask;
-      gchar *operation_name = NULL;
+      gchar *loaded_operation_name = NULL;
       GError *error = NULL;
       gfloat original[4];
 
@@ -1141,9 +1161,9 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
                          gimp_drawable_get_filters (GIMP_DRAWABLE (loaded_group)), 0));
       g_assert_false (gimp_drawable_filter_get_temporary (loaded_filter));
       g_assert_cmpfloat_with_epsilon (gimp_drawable_filter_get_opacity (loaded_filter), 0.5, 0.001);
-      gegl_node_get (gimp_drawable_filter_get_operation (loaded_filter), "operation", &operation_name, NULL);
-      g_assert_cmpstr (operation_name, ==, "gegl:invert-linear");
-      g_free (operation_name);
+      gegl_node_get (gimp_drawable_filter_get_operation (loaded_filter), "operation", &loaded_operation_name, NULL);
+      g_assert_cmpstr (loaded_operation_name, ==, operation_name);
+      g_free (loaded_operation_name);
       gegl_buffer_get (gimp_drawable_get_buffer (GIMP_DRAWABLE (loaded_source)),
                        GEGL_RECTANGLE (2, 2, 1, 1), 1.0, babl_format ("RGBA float"),
                        original, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
@@ -1157,12 +1177,46 @@ adjustment_group_xcf_roundtrip (gconstpointer data)
       assert_adjustment_pixel (loaded, 2, 0.5);
       assert_adjustment_pixel (loaded, 1, 0.875);
       assert_adjustment_pixel (loaded, 7, 1.0);
+      if (levels)
+        {
+          GimpLevelsConfig *loaded_config = NULL;
+          gdouble high_output;
+
+          gegl_node_get (gimp_drawable_filter_get_operation (loaded_filter),
+                         "config", &loaded_config, NULL);
+          g_assert_true (GIMP_IS_LEVELS_CONFIG (loaded_config));
+          g_object_get (loaded_config, "high-output", &high_output, NULL);
+          g_assert_cmpfloat_with_epsilon (high_output, 0.0, 0.001);
+          g_object_set (loaded_config, "high-output", 1.0, NULL);
+          gimp_operation_config_sync_node (G_OBJECT (loaded_config),
+                                           gimp_drawable_filter_get_operation (loaded_filter));
+          gimp_drawable_filter_apply (loaded_filter, NULL);
+          assert_adjustment_pixel (loaded, 1, 1.0);
+          g_object_set (loaded_config, "high-output", 0.0, NULL);
+          gimp_operation_config_sync_node (G_OBJECT (loaded_config),
+                                           gimp_drawable_filter_get_operation (loaded_filter));
+          gimp_drawable_filter_apply (loaded_filter, NULL);
+          assert_adjustment_pixel (loaded, 1, 0.875);
+          g_object_unref (loaded_config);
+        }
       g_assert_true (g_file_delete (file, NULL, &error));
       g_assert_no_error (error);
       g_object_unref (file);
       g_object_unref (loaded);
     }
   g_object_unref (image);
+}
+
+static void
+adjustment_group_xcf_roundtrip (gconstpointer data)
+{
+  adjustment_group_roundtrip (GIMP (data), FALSE);
+}
+
+static void
+adjustment_levels_xcf_roundtrip (gconstpointer data)
+{
+  adjustment_group_roundtrip (GIMP (data), TRUE);
 }
 
 int
@@ -1188,6 +1242,7 @@ main (int    argc,
   ADD_TEST (load_gimp_2_6_file);
   ADD_TEST (write_and_read_gimp_2_8_format);
   ADD_TEST (adjustment_group_xcf_roundtrip);
+  ADD_TEST (adjustment_levels_xcf_roundtrip);
 
   /* Don't write files to the source dir */
   gimp_test_utils_set_gimp3_directory ("GIMP_TESTING_ABS_TOP_BUILDDIR",
