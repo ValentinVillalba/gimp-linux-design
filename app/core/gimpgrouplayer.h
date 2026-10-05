@@ -40,6 +40,8 @@ GType            gimp_group_layer_get_type            (void) G_GNUC_CONST;
 
 GimpLayer      * gimp_group_layer_new                 (GimpImage           *image);
 
+GimpLayerMask  * gimp_group_layer_create_adjustment_mask (GimpGroupLayer    *group);
+
 GimpProjection * gimp_group_layer_get_projection      (GimpGroupLayer      *group);
 
 void             gimp_group_layer_suspend_resize      (GimpGroupLayer      *group,

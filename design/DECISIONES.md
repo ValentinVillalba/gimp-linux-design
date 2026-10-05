@@ -194,6 +194,16 @@ La preparación XCF compartida tiene un tercer caso con selección de valores 1,
 
 Los siete casos internos de XCF pasan. Esto verifica la estrategia del modelo en una imagen de 10×10, sin offsets; todavía no implementa el acceso de creación desde los menús. La futura acción debe usar esta estrategia sin modificar la selección, agrupar su creación en undo y comprobar bounds/offsets y cancelación. El constructor nativo de máscara del filtro y GEGL se reutilizan; no se añadieron dependencias, servicios, IA ni modificaciones del render.
 
+## D026 — Máscara de ajuste anclada al lienzo
+
+Se revisaron el bounding box de GimpGroupLayer, gimp_layer_create_mask y gimp_layer_mask_set_layer. La prueba nueva mueve una capa de 10×10 a x=3 dentro de un lienzo de 16×10, con selección parcial y una zona blanca en el extremo derecho. La creación genérica de máscara obtenía ancho 10 y offset 0: el píxel x=12 quedaba fuera de la máscara y devolvía blanco 1 en vez del ajuste esperado 0.5. Comprobar sólo tamaño o píxeles centrales no detectaba esa pérdida.
+
+Se añadió gimp_group_layer_create_adjustment_mask, específica para grupos vacíos con origen 0,0. Usa el constructor nativo GimpLayerMask con tamaño del lienzo. Sin selección la deja blanca; con selección reutiliza gimp_gegl_buffer_dup y gimp_drawable_set_buffer para copiarla sin modificarla. No cambia la creación de máscaras de grupos convencionales, la representación del grupo ni el render. Las precondiciones rechazan contenedores con hijos o desplazados: este helper prepara un ajuste vacío nuevo, no una conversión general de carpetas existentes. Aún no se invoca desde el menú; será reutilizado por la acción completa de ajuste.
+
+Los casos XCF compartidos usan el helper y comprueban máscara 16×10, origen 0,0, posición conservada de la capa inferior, selección aplicada una vez y efecto en el extremo derecho, además de composición, undo/redo de máscara, parámetros editables y XCF con/sin compresión. Otro caso comprueba máscara blanca 7×5 en un grupo sin capas inferiores, incluyendo el último píxel del lienzo. Pasaron los 20 ejecutables de la suite después del cambio de núcleo y los 9 casos internos XCF después de añadir el caso vacío.
+
+La máscara usa tiles GEGL y duplicación nativa de buffers; no se añadió una capa raster de relleno ni dependencia. Falta medir consumo con lienzos grandes, comprobar desplazamientos negativos/verticales, contenido fuera del lienzo, cambio de tamaño del documento, grupos anidados y conectar el editor/cancelación. El avance global permanece aproximadamente en 10%: hay evidencia y una pieza reutilizable, pero todavía no un flujo completo de creación de ajustes.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/

@@ -32,9 +32,12 @@
 
 #include "gegl/gimp-babl.h"
 #include "gegl/gimp-gegl-loops.h"
+#include "gegl/gimp-gegl-utils.h"
 
 #include "gimpdrawable-filters.h"
 #include "gimpgrouplayer.h"
+#include "gimpchannel.h"
+#include "gimplayermask.h"
 #include "gimpgrouplayerundo.h"
 #include "gimpimage.h"
 #include "gimpimage-undo.h"
@@ -1619,6 +1622,50 @@ gimp_group_layer_new (GimpImage *image)
                        FALSE);
 
   return GIMP_LAYER (group);
+}
+
+
+/* Empty adjustment groups affect the backdrop in image coordinates.  Their
+ * drawable bounds can start away from zero and cannot define the mask size.
+ * Keep the mask anchored to the canvas, including when there is no backdrop.
+ */
+GimpLayerMask *
+gimp_group_layer_create_adjustment_mask (GimpGroupLayer *group)
+{
+  GimpImage     *image;
+  GimpChannel   *selection;
+  GimpLayerMask *mask;
+  GeglColor     *black;
+
+  g_return_val_if_fail (GIMP_IS_GROUP_LAYER (group), NULL);
+  g_return_val_if_fail (gimp_container_get_n_children (
+                         gimp_viewable_get_children (GIMP_VIEWABLE (group))) == 0, NULL);
+  g_return_val_if_fail (gimp_item_get_offset_x (GIMP_ITEM (group)) == 0 &&
+                       gimp_item_get_offset_y (GIMP_ITEM (group)) == 0, NULL);
+
+  image = gimp_item_get_image (GIMP_ITEM (group));
+  g_return_val_if_fail (GIMP_IS_IMAGE (image), NULL);
+
+  black = gegl_color_new ("black");
+  mask = gimp_layer_mask_new (image, gimp_image_get_width (image),
+                              gimp_image_get_height (image),
+                              gimp_object_get_name (group), black);
+  g_object_unref (black);
+  selection = gimp_image_get_mask (image);
+
+  if (gimp_channel_is_empty (selection))
+    gimp_channel_all (GIMP_CHANNEL (mask), FALSE);
+  else
+    {
+      GeglBuffer *buffer = gimp_gegl_buffer_dup (
+        gimp_drawable_get_buffer (GIMP_DRAWABLE (selection)));
+
+      gimp_drawable_set_buffer (GIMP_DRAWABLE (mask), FALSE, NULL, buffer);
+      g_object_unref (buffer);
+      GIMP_CHANNEL (mask)->bounds_known = FALSE;
+    }
+
+  return mask;
 }
 
 GimpProjection *

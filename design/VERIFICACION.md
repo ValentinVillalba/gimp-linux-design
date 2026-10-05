@@ -132,3 +132,9 @@ Compilación Linux y Meson: 20 ejecutables correctos, 0 fallos. Se actualizó el
 Compilación incremental WSL correcta. La prueba `xcf` pasó con 7 casos internos, incluido `adjustment_selection_xcf_roundtrip`; 0 fallos. Registros locales: `_design-logs/linux-build-adjustment-selection.log` y `_design-logs/linux-test-adjustment-selection.log`. Se conserva el detalle Meson en el build WSL.
 
 El nuevo caso comprueba selección 0.5 preservada durante la creación, aplicación única mediante máscara del grupo, deselección posterior sin alterar el filtro permanente, undo/redo de máscara, edición, XCF con/sin compresión y parámetros editables al cargar. La lectura de píxeles procesa eventos como las pruebas anteriores. Sólo se modificaron pruebas/documentación; no se reinstaló el producto ni se repitió smoke. No cubre offsets, lienzos de otro tamaño ni la interacción con el editor de parámetros.
+
+## Máscaras de ajuste y contenido desplazado — 2026-10-04
+
+Compilación WSL correcta. Suite completa: 20 ejecutables correctos, 0 fallos; `_design-logs/linux-build-adjustment-offset.log` y `_design-logs/linux-test-adjustment-offset.log`. Después de añadir la prueba de grupo vacío: `xcf` correcto con 9 casos internos, 0 fallos; `_design-logs/linux-build-adjustment-empty.log` y `_design-logs/linux-test-adjustment-empty.log`.
+
+El caso desplazado detectó máscara genérica de ancho 10/origen 0 sobre capa en x=3: el extremo x=12 no recibía el efecto. El helper nuevo usa máscara del lienzo y pasa ese píxel antes/después de XCF comprimido/no comprimido. Comprueba offset de capa y origen de máscara, selección parcial, undo/redo y parámetros de Niveles. Otro caso prueba máscara 7×5 blanca en grupo vacío sin backdrop. No se cambiaron los menús ni el flujo de arranque; no se reinstaló ni repitió smoke. No se verifica todavía resize, offsets negativos/verticales o experiencia visual del editor.
