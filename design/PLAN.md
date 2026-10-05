@@ -70,3 +70,9 @@ Se comprobó máscara blanca/negra/parcial, undo/redo de adición, edición desp
 Se verificó Niveles nativo con configuración editable: identidad inicial, modificación, composición enmascarada, guardado/reapertura XCF con/sin compresión y edición posterior. Se reutiliza la sincronización de configuración de GIMP hacia GEGL. El acceso a sus controles desde Nuevo ajuste todavía está pendiente; primero deben cerrarse selección activa, bounds vacíos, offsets y cancelación (D024).
 
 Se verificó la selección parcial en el modelo de ajuste y en XCF: máscara blanca propia del filtro, selección copiada una sola vez al grupo, selección conservada al crear y efecto estable al deseleccionar. Siete casos XCF correctos. Quedan pendientes el acceso de interfaz, bounds/offsets y cancelación; no hace falta borrar/restaurar temporalmente la selección (D025).
+
+## Estimación del avance global
+
+A petición del usuario, informar una estimación global en los avances de nuevas funciones. Referencia inicial al 2026-10-04: aproximadamente 10% (rango orientativo 5–15%). Es una valoración del trabajo restante del fork, no una medición de líneas de código, horas ni del porcentaje de herramientas que GIMP ya trae. El objetivo completo incluye experiencia comparable a Photoshop, flujos avanzados, intercambio de documentos, funcionamiento local y verificación de rendimiento/Linux.
+
+La base, la compilación y algunas adaptaciones de capas están implementadas. Falta aceptación de la experiencia en Linux y la mayor parte de las diferencias avanzadas de la tabla. Las pruebas de Niveles/selección reducen incertidumbre, pero no completan la interfaz de capas de ajuste. No subir el porcentaje por cada test aislado; revisar la estimación cuando se cierre un flujo utilizable y su verificación. Mantener visibles las limitaciones y corregir el valor si la investigación descubre más alcance.
