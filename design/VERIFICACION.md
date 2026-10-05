@@ -92,3 +92,11 @@ Registros raíz: linux-build-local-help.log y linux-tests-local-help.log; arranq
 Se recompiló el editor Linux tras retirar selectores de manual en línea/navegador externo y el fallback automático de preferencias. Meson: 20 pruebas correctas, 0 fallos. Se actualizó el ejecutable del prefijo aislado y pasó el smoke con _design-profile-local-help-preferences, lectura comprobada de las cuatro configuraciones y salida normal.
 
 Registros raíz: linux-build-local-help-preferences.log y linux-tests-local-help-preferences.log. Falta aceptación visual de la página con/sin manuales, teclado y escalado; las pruebas anteriores no demuestran esa interacción. La política efectiva de índices locales sigue cubierta por test-local-help.sh y D019.
+
+## Composición y undo de grupo de ajuste — 2026-10-04
+
+La nueva prueba core aplica invert-linear a un grupo vacío Pass through sobre una capa blanca. Comprueba proyección negra opaca, buffer original blanco, filtro retirado por undo, proyección blanca tras undo y negra tras redo. La preparación usa registro nativo de undo y flush de imagen. La lectura de proyección falló inicialmente aunque el grafo directo devolvía el valor correcto; se corrigió la reconstrucción tras cambiar la representación efectiva del grupo en gimpgrouplayer.c. Las alternativas de invalidación de área no pasaron y no se conservaron.
+
+Compilación Linux y suite Meson: 20 ejecutables correctos, 0 fallos; core incluye el nuevo caso. Se actualizó el ejecutable del prefijo aislado. El smoke pasó con _design-profile-adjustment-composition y perfil comprobado. Registros raíz: linux-build-adjustment-composition.log, linux-tests-adjustment-composition.log y linux-test-adjustment-composition-details.txt.
+
+Falta cubrir máscaras, filtros ajustables, opacidad, grupos anidados y XCF de esta composición. La transición exige reconstruir la proyección; falta medir tiempos y memoria en documentos grandes. No se declara una implementación completa de capas de ajuste por pasar este caso.

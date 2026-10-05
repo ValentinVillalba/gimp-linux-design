@@ -1261,6 +1261,12 @@ gimp_group_layer_effective_mode_changed (GimpLayer *layer)
 
   if (GIMP_LAYER_CLASS (parent_class)->effective_mode_changed)
     GIMP_LAYER_CLASS (parent_class)->effective_mode_changed (layer);
+
+  /* The source switches between backdrop composition and our own projection.
+   * Cached image tiles from the previous graph are no longer valid. */
+  if (update_bounding_box && gimp_item_is_attached (GIMP_ITEM (group)))
+    gimp_projectable_structure_changed (
+      GIMP_PROJECTABLE (gimp_item_get_image (GIMP_ITEM (group))));
 }
 
 static void

@@ -36,6 +36,9 @@
 #include "core/gimpgrouplayer.h"
 #include "core/gimpimage.h"
 #include "core/gimpimage-undo.h"
+#include "core/gimpimage-undo-push.h"
+#include "core/gimppickable.h"
+#include "core/gimpprojection.h"
 #include "core/gimplayer.h"
 #include "core/gimplayer-new.h"
 
@@ -464,6 +467,63 @@ group_selected_ancestor_and_lock (GimpTestFixture *fixture,
 }
 
 static void
+adjustment_group_filters_backdrop (GimpTestFixture *fixture,
+                                  gconstpointer    data)
+{
+  Gimp *gimp = GIMP (data);
+  GimpImage *image = fixture->image;
+  GimpContext *context = gimp_get_user_context (gimp);
+  GimpLayer *source = group_test_layer (image, NULL, "Original");
+  GimpLayer *adjustment;
+  GeglColor *white = gegl_color_new ("white");
+  GeglNode *operation;
+  GimpDrawableFilter *filter;
+  gfloat pixel[4];
+
+  gegl_buffer_set_color (gimp_drawable_get_buffer (GIMP_DRAWABLE (source)), NULL, white);
+  g_object_unref (white);
+  gimp_drawable_update (GIMP_DRAWABLE (source), 0, 0, 10, 10);
+  gimp_context_set_image (context, image);
+  layers_new_adjustment_group_cmd_callback (NULL, NULL, gimp);
+  adjustment = gimp_image_get_selected_layers (image)->data;
+  operation = gegl_node_new_child (NULL, "operation", "gegl:invert-linear", NULL);
+  filter = gimp_drawable_filter_new (GIMP_DRAWABLE (adjustment), "Invert", operation, NULL);
+  gimp_drawable_filter_apply (filter, NULL);
+  g_assert_true (gimp_drawable_filter_commit (filter, TRUE, NULL, FALSE));
+  gimp_drawable_filter_layer_mask_freeze (filter);
+  gimp_image_undo_push_filter_add (image, "Invert", GIMP_DRAWABLE (adjustment), filter);
+  g_object_unref (filter);
+  g_object_unref (operation);
+  gimp_image_flush (image);
+  gimp_pickable_flush (GIMP_PICKABLE (gimp_image_get_projection (image)));
+  gegl_buffer_get (gimp_pickable_get_buffer (GIMP_PICKABLE (gimp_image_get_projection (image))),
+                   GEGL_RECTANGLE (2, 2, 1, 1), 1.0, babl_format ("RGBA float"),
+                   pixel, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
+  g_assert_cmpfloat_with_epsilon (pixel[0], 0.0, 0.01);
+  g_assert_cmpfloat_with_epsilon (pixel[3], 1.0, 0.01);
+  gegl_buffer_get (gimp_drawable_get_buffer (GIMP_DRAWABLE (source)),
+                   GEGL_RECTANGLE (2, 2, 1, 1), 1.0, babl_format ("RGBA float"),
+                   pixel, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
+  g_assert_cmpfloat_with_epsilon (pixel[0], 1.0, 0.01);
+  g_assert_true (gimp_image_undo (image));
+  g_assert_cmpint (gimp_container_get_n_children (gimp_drawable_get_filters (GIMP_DRAWABLE (adjustment))), ==, 0);
+  gimp_image_flush (image);
+  gimp_pickable_flush (GIMP_PICKABLE (gimp_image_get_projection (image)));
+  gegl_buffer_get (gimp_pickable_get_buffer (GIMP_PICKABLE (gimp_image_get_projection (image))),
+                   GEGL_RECTANGLE (2, 2, 1, 1), 1.0, babl_format ("RGBA float"),
+                   pixel, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
+  g_assert_cmpfloat_with_epsilon (pixel[0], 1.0, 0.01);
+  g_assert_true (gimp_image_redo (image));
+  gimp_image_flush (image);
+  gimp_pickable_flush (GIMP_PICKABLE (gimp_image_get_projection (image)));
+  gegl_buffer_get (gimp_pickable_get_buffer (GIMP_PICKABLE (gimp_image_get_projection (image))),
+                   GEGL_RECTANGLE (2, 2, 1, 1), 1.0, babl_format ("RGBA float"),
+                   pixel, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
+  g_assert_cmpfloat_with_epsilon (pixel[0], 0.0, 0.01);
+  gimp_context_set_image (context, NULL);
+}
+
+static void
 copy_selection_pixels_offsets_undo (GimpTestFixture *fixture,
                                     gconstpointer    data)
 {
@@ -885,6 +945,7 @@ main (int    argc,
   ADD_IMAGE_TEST (rotate_non_overlapping);
   ADD_IMAGE_TEST (adjustment_group_undo_redo);
   ADD_IMAGE_TEST (adjustment_group_keeps_parent);
+  ADD_IMAGE_TEST (adjustment_group_filters_backdrop);
   ADD_IMAGE_TEST (group_selected_order_undo);
   ADD_IMAGE_TEST (group_selected_common_parent);
   ADD_IMAGE_TEST (group_selected_ancestor_and_lock);

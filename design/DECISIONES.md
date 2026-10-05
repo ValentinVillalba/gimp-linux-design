@@ -144,6 +144,16 @@ Se eliminó el cambio automático a navegador externo cuando falta WebKit/visor.
 
 La compilación y suite verifican integración y regresiones generales. Falta abrir visualmente esta página con/sin manuales y comprobar teclado/escala; el arranque smoke no demuestra esos comportamientos. El visor HTML opcional y sus subrecursos siguen pendientes de auditoría.
 
+## D021 — Comprobar la composición antes de ampliar ajustes
+
+Se revisaron el grupo nativo, GimpDrawableFilter y la proyección de imagen. El acceso «Nuevo grupo de ajuste» todavía crea únicamente un contenedor Pass through. Antes de añadir controles de ajuste se incorporó una prueba de píxeles reales: capa blanca inferior, grupo vacío arriba, filtro permanente invert-linear. La proyección debe ser negra opaca mientras el buffer original sigue blanco. Deshacer el filtro devuelve la composición blanca; rehacer devuelve la negra.
+
+La preparación reproduce el registro nativo de undo del filtro, que se realiza separadamente de gimp_drawable_filter_commit, y la actualización de imagen de la acción de deshacer. Con este ciclo completo apareció una regresión de proyección: el filtro se retiraba de la pila y el grafo directo calculaba blanco, pero las lecturas de la proyección conservaban el negro anterior; al rehacer también podía conservarse la imagen previa. Invalidar sólo áreas no resolvió el caso. Se corrigió la transición efectiva del grupo entre Pass through y su representación normal reducida, avisando del cambio de estructura de la imagen después de reconectar sus nodos. La proyección descarta los tiles de la estructura anterior. La corrección central cubre las transiciones independientemente de qué acción las origine.
+
+No se copian buffers originales ni se hornean efectos. La reconstrucción sólo ocurre cuando cambia la representación efectiva, no en cada modificación de parámetros. Puede exigir volver a renderizar la composición tras esa transición; falta medir el coste en documentos grandes. No se conserva la reconstrucción más amplia que se probó inicialmente en el código de undo.
+
+La prueba usa el motor GEGL y la proyección reales, no una simulación del cálculo. La inversión lineal se eligió por tener un resultado conocido y por aislar la composición del diseño de una interfaz de curvas. No se agrega una nueva implementación de filtros ni se declara paridad de capas de ajuste. Esta evidencia permite reutilizar el mecanismo nativo; todavía faltan máscaras, alcance en grupos anidados, orden de filtros, opacidad, selección y guardado/reapertura XCF antes de diseñar una operación completa.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/
