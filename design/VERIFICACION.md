@@ -100,3 +100,11 @@ La nueva prueba core aplica invert-linear a un grupo vacío Pass through sobre u
 Compilación Linux y suite Meson: 20 ejecutables correctos, 0 fallos; core incluye el nuevo caso. Se actualizó el ejecutable del prefijo aislado. El smoke pasó con _design-profile-adjustment-composition y perfil comprobado. Registros raíz: linux-build-adjustment-composition.log, linux-tests-adjustment-composition.log y linux-test-adjustment-composition-details.txt.
 
 Falta cubrir máscaras, filtros ajustables, opacidad, grupos anidados y XCF de esta composición. La transición exige reconstruir la proyección; falta medir tiempos y memoria en documentos grandes. No se declara una implementación completa de capas de ajuste por pasar este caso.
+
+## Roundtrip XCF del grupo de ajuste — 2026-10-04
+
+Se añadió adjustment_group_xcf_roundtrip a la suite nativa XCF. Usa imagen float lineal, fondo blanco y grupo vacío Pass through con invert-linear permanente a intensidad 0.5. Verifica composición gris opaca antes de guardar y después de cargar, operación/intensidad serializadas, estructura y orden, buffer original intacto y desactivación/reactivación del filtro cargado. Repite con compresión desactivada y activada; elimina sus archivos temporales al terminar.
+
+Compilación Linux correcta. La prueba XCF y luego la suite Meson completa pasaron: 20 ejecutables, 0 fallos. Registros raíz: linux-build-adjustment-xcf.log, linux-tests-adjustment-xcf.log y linux-test-adjustment-xcf-details.txt. No cambió el ejecutable del producto; no se repitió smoke, porque el cambio sólo agrega pruebas y documentación.
+
+Cobertura limitada al caso descrito: no demuestra máscaras de ajuste, curvas/niveles, grupos anidados, múltiples efectos, PSD ni aceptación visual de controles. D022 registra que puede reutilizarse el formato nativo para este caso sin añadir un formato alternativo.

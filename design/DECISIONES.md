@@ -154,6 +154,14 @@ No se copian buffers originales ni se hornean efectos. La reconstrucción sólo 
 
 La prueba usa el motor GEGL y la proyección reales, no una simulación del cálculo. La inversión lineal se eligió por tener un resultado conocido y por aislar la composición del diseño de una interfaz de curvas. No se agrega una nueva implementación de filtros ni se declara paridad de capas de ajuste. Esta evidencia permite reutilizar el mecanismo nativo; todavía faltan máscaras, alcance en grupos anidados, orden de filtros, opacidad, selección y guardado/reapertura XCF antes de diseñar una operación completa.
 
+## D022 — Guardado y reapertura XCF de ajustes
+
+Se revisó y reutilizó la infraestructura de test-xcf.c, file_save, file_open_image y los filtros serializados del formato nativo. Se añadió un caso que crea una imagen float lineal, capa original blanca y grupo vacío Pass through con inversión permanente al 50% de intensidad. Comprueba el resultado gris opaco antes de guardar.
+
+El caso guarda y reabre XCF con y sin compresión. Comprueba estructura y orden de capas, nombre/modo del grupo, filtro permanente, operación GEGL, intensidad 0.5, buffer original blanco y composición gris. Después desactiva el filtro cargado y comprueba blanco; lo reactiva y comprueba gris. Esto verifica que XCF conserva el efecto editable, sin hornearlo en la capa original, para este caso concreto.
+
+No hizo falta crear un formato, cargador ni implementación alternativa del filtro. No se copiaron archivos de Photoshop ni se añadieron dependencias. Falta ampliar a máscaras, ajustes con parámetros como curvas/niveles, grupos anidados, varios efectos y PSD. El estado se limita a la composición comprobada; no se infiere paridad de capas de ajuste por un roundtrip correcto.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/

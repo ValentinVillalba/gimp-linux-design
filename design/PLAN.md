@@ -62,3 +62,5 @@ La página de preferencias de ayuda ya no ofrece alternativas de Internet. Conse
 La prueba nativa de composición del grupo de ajuste comprueba filtro sobre el fondo sin alterar el buffer original y su deshacer/rehacer. Esta evidencia valida reutilizar la composición Pass through; falta ampliar cobertura de máscaras/XCF y crear la operación de ajuste completa.
 
 La prueba de composición detectó tiles obsoletos al cambiar la representación efectiva del grupo. Se corrigió la transición central del grafo para que la proyección se reconstruya; se conserva el render diferido de GEGL y queda pendiente medir el coste en documentos grandes.
+
+Se comprobó el roundtrip XCF del grupo de ajuste con filtro permanente e intensidad 0.5, con/sin compresión. Se conservan capas originales, composición y activación editable. Continúan pendientes máscaras, curvas/niveles, grupos anidados y varios efectos; no se necesita un formato nuevo para este caso.
