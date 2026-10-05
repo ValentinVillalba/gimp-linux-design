@@ -126,3 +126,9 @@ Compilación Linux y Meson: 20 ejecutables correctos, 0 fallos. Se actualizó el
 - Se verificaron parámetros iniciales neutros, high-output=0, composición de máscara a intensidad 0.5, undo/redo de máscara, edición tras render, XCF con/sin compresión y modificación de parámetros cargados. La preparación de inversión existente se conserva mediante un helper compartido.
 - La primera ejecución falló por omitir la sincronización config → nodo que usa el editor nativo; se corrigió la prueba reutilizando gimp_operation_config_sync_node. No se cambió el código de render.
 - Esta modificación afecta pruebas y documentación. No necesita reinstalar el ejecutable; no se repitió smoke porque no hay cambios del producto. No se afirma aceptación visual de los controles ni selección/offsets verificados.
+
+## Selección parcial en ajustes — 2026-10-04
+
+Compilación incremental WSL correcta. La prueba `xcf` pasó con 7 casos internos, incluido `adjustment_selection_xcf_roundtrip`; 0 fallos. Registros locales: `_design-logs/linux-build-adjustment-selection.log` y `_design-logs/linux-test-adjustment-selection.log`. Se conserva el detalle Meson en el build WSL.
+
+El nuevo caso comprueba selección 0.5 preservada durante la creación, aplicación única mediante máscara del grupo, deselección posterior sin alterar el filtro permanente, undo/redo de máscara, edición, XCF con/sin compresión y parámetros editables al cargar. La lectura de píxeles procesa eventos como las pruebas anteriores. Sólo se modificaron pruebas/documentación; no se reinstaló el producto ni se repitió smoke. No cubre offsets, lienzos de otro tamaño ni la interacción con el editor de parámetros.

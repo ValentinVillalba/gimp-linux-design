@@ -49,6 +49,7 @@
 #include "core/gimpdrawable.h"
 #include "core/gimpdrawable-filters.h"
 #include "core/gimpdrawablefilter.h"
+#include "core/gimpdrawablefiltermask.h"
 #include "core/gimpcontainer.h"
 #include "core/gimpfilter.h"
 #include "core/gimppickable.h"
@@ -1044,7 +1045,8 @@ assert_adjustment_pixel (GimpImage *image,
 
 static void
 adjustment_group_roundtrip (Gimp     *gimp,
-                            gboolean  levels)
+                            gboolean  levels,
+                            gboolean  selection)
 {
   GimpImage *image = gimp_image_new (gimp, 10, 10, GIMP_RGB,
                                     GIMP_PRECISION_FLOAT_LINEAR);
@@ -1060,6 +1062,17 @@ adjustment_group_roundtrip (Gimp     *gimp,
   GimpLayerMask *mask;
   gfloat mask_row[10] = { 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
 
+  if (selection)
+    {
+      GimpChannel *selected = gimp_image_get_mask (image);
+
+      gimp_channel_clear (selected, NULL, FALSE);
+      gegl_buffer_set (gimp_drawable_get_buffer (GIMP_DRAWABLE (selected)),
+                       GEGL_RECTANGLE (0, 2, 10, 1), 0, babl_format ("Y float"),
+                       mask_row, GEGL_AUTO_ROWSTRIDE);
+      selected->bounds_known = FALSE;
+      gimp_drawable_update (GIMP_DRAWABLE (selected), 0, 2, 10, 1);
+    }
   gimp_image_add_layer (image, source, NULL, 0, FALSE);
   gegl_buffer_set_color (gimp_drawable_get_buffer (GIMP_DRAWABLE (source)), NULL, white);
   g_object_unref (white);
@@ -1072,6 +1085,16 @@ adjustment_group_roundtrip (Gimp     *gimp,
     {
       config = g_object_new (GIMP_TYPE_LEVELS_CONFIG, NULL);
       gegl_node_set (operation, "config", config, NULL);
+    }
+  if (selection)
+    {
+      GimpDrawableFilterMask *filter_mask =
+        gimp_drawable_filter_mask_new (image, 10, 10);
+
+      /* The selection belongs to the group mask only, never to both masks. */
+      gimp_channel_all (GIMP_CHANNEL (filter_mask), FALSE);
+      g_object_set (filter, "mask", filter_mask, NULL);
+      g_object_unref (filter_mask);
     }
   gimp_drawable_filter_set_opacity (filter, 0.5);
   gimp_drawable_filter_apply (filter, NULL);
@@ -1089,14 +1112,29 @@ adjustment_group_roundtrip (Gimp     *gimp,
   g_object_unref (filter);
   g_object_unref (operation);
   assert_adjustment_pixel (image, 2, 0.5);
-  mask = gimp_layer_create_mask (group, GIMP_ADD_MASK_WHITE, NULL);
+  mask = gimp_layer_create_mask (group, selection ? GIMP_ADD_MASK_SELECTION :
+                                                 GIMP_ADD_MASK_WHITE, NULL);
   g_assert_nonnull (mask);
   g_assert_cmpint (gimp_item_get_width (GIMP_ITEM (mask)), ==, 10);
   g_assert_cmpint (gimp_item_get_height (GIMP_ITEM (mask)), ==, 10);
   g_assert_nonnull (gimp_layer_add_mask (group, mask, FALSE, TRUE, NULL));
-  gegl_buffer_set (gimp_drawable_get_buffer (GIMP_DRAWABLE (mask)),
-                   GEGL_RECTANGLE (0, 2, 10, 1), 0, babl_format ("Y float"),
-                   mask_row, GEGL_AUTO_ROWSTRIDE);
+  if (selection)
+    {
+      gfloat selected_value;
+
+      gegl_buffer_get (gimp_drawable_get_buffer (GIMP_DRAWABLE (gimp_image_get_mask (image))),
+                       GEGL_RECTANGLE (1, 2, 1, 1), 1.0, babl_format ("Y float"),
+                       &selected_value, GEGL_AUTO_ROWSTRIDE, GEGL_ABYSS_NONE);
+      g_assert_cmpfloat_with_epsilon (selected_value, 0.5, 0.001);
+      /* Deselecting afterwards must not change a permanent adjustment. */
+      gimp_channel_clear (gimp_image_get_mask (image), NULL, FALSE);
+    }
+  else
+    {
+      gegl_buffer_set (gimp_drawable_get_buffer (GIMP_DRAWABLE (mask)),
+                       GEGL_RECTANGLE (0, 2, 10, 1), 0, babl_format ("Y float"),
+                       mask_row, GEGL_AUTO_ROWSTRIDE);
+    }
   gimp_drawable_update (GIMP_DRAWABLE (mask), 0, 2, 10, 1);
   assert_adjustment_pixel (image, 2, 0.5);
   assert_adjustment_pixel (image, 1, 0.75);
@@ -1210,13 +1248,19 @@ adjustment_group_roundtrip (Gimp     *gimp,
 static void
 adjustment_group_xcf_roundtrip (gconstpointer data)
 {
-  adjustment_group_roundtrip (GIMP (data), FALSE);
+  adjustment_group_roundtrip (GIMP (data), FALSE, FALSE);
 }
 
 static void
 adjustment_levels_xcf_roundtrip (gconstpointer data)
 {
-  adjustment_group_roundtrip (GIMP (data), TRUE);
+  adjustment_group_roundtrip (GIMP (data), TRUE, FALSE);
+}
+
+static void
+adjustment_selection_xcf_roundtrip (gconstpointer data)
+{
+  adjustment_group_roundtrip (GIMP (data), TRUE, TRUE);
 }
 
 int
@@ -1243,6 +1287,7 @@ main (int    argc,
   ADD_TEST (write_and_read_gimp_2_8_format);
   ADD_TEST (adjustment_group_xcf_roundtrip);
   ADD_TEST (adjustment_levels_xcf_roundtrip);
+  ADD_TEST (adjustment_selection_xcf_roundtrip);
 
   /* Don't write files to the source dir */
   gimp_test_utils_set_gimp3_directory ("GIMP_TESTING_ABS_TOP_BUILDDIR",

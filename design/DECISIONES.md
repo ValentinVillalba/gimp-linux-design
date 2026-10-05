@@ -186,6 +186,14 @@ La siguiente acción de interfaz deberá crear grupo/filtro/máscara como una so
 
 No se añadieron dependencias, conexiones ni IA. La prueba verifica parámetros del modelo y XCF, no interacción visual con controles, máscaras desplazadas, Curvas, Brillo/Contraste ni paridad Photoshop.
 
+## D025 — Selección aplicada una sola vez al ajuste
+
+Se revisaron gimp_drawable_filter_sync_mask, gimp_drawable_filter_layer_mask_freeze, gimp_drawable_filter_mask_new y la copia de selección de gimp_layer_create_mask. Un filtro sin máscara propia usa la selección de imagen. Si además se copia esa selección a la máscara del grupo, se puede atenuar el efecto dos veces. Se eligió verificar la alternativa nativa: máscara blanca propia del filtro y selección copiada sólo a la máscara de capa del grupo. No se borra/restaura temporalmente la selección ni se agrega una representación paralela.
+
+La preparación XCF compartida tiene un tercer caso con selección de valores 1, 0.5 y 0. Comprueba que crear el filtro y la máscara conserva el valor 0.5 de la selección. Después la deselecciona y verifica que el ajuste permanente mantiene sus resultados: Niveles negro, intensidad 0.5, máscara 0.5 produce 0.75 sobre fondo blanco (dos aplicaciones de la selección producirían 0.875). Incluye undo/redo de adición de máscara, edición posterior a 0.25, guardado/reapertura con/sin compresión y edición de los parámetros de Niveles cargados.
+
+Los siete casos internos de XCF pasan. Esto verifica la estrategia del modelo en una imagen de 10×10, sin offsets; todavía no implementa el acceso de creación desde los menús. La futura acción debe usar esta estrategia sin modificar la selección, agrupar su creación en undo y comprobar bounds/offsets y cancelación. El constructor nativo de máscara del filtro y GEGL se reutilizan; no se añadieron dependencias, servicios, IA ni modificaciones del render.
+
 ## Fuentes consultadas
 
 - https://www.gimp.org/news/2026/09/10/gimp-3-2-6-released/
